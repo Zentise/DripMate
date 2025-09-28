@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getOutfitSuggestion } from "./api/dripMateAPI.js"; // Ensure .js is here
+import { getOutfitSuggestion } from "./api/dripMateAPI.js";
 
 // A component to render the Bot's special response
 const BotResponse = ({ content }) => {
@@ -39,8 +39,9 @@ const BotResponse = ({ content }) => {
 
 function App() {
   const [formData, setFormData] = useState({
-    item: "", vibe: "", gender: "Male", // Default gender
-    age_group: "", skin_colour: "", num_ideas: 1, more_details: ""
+    item: "", vibe: "", gender: "Male",
+    age_group: "", skin_colour: "", num_ideas: 1, more_details: "",
+    layering_preference: "AI Decides"
   });
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +54,7 @@ function App() {
   const handleSend = async (e) => {
     e.preventDefault();
     if (!formData.item || !formData.vibe || !formData.gender || isLoading) return;
-
+    
     const userMessage = { sender: "user", text: `Getting suggestions for: ${formData.item}` };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
@@ -72,7 +73,6 @@ function App() {
           <p className="text-slate-500">Your Evolved AI Personal Stylist</p>
         </header>
 
-        {/* --- Message Display --- */}
         <main className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, index) => (
             <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -84,25 +84,30 @@ function App() {
           {isLoading && <div className="flex justify-start"><div className="bg-white p-3 rounded-lg shadow-sm"><p className="text-slate-500 animate-pulse">DripMate is thinking...</p></div></div>}
         </main>
         
-        {/* --- New Input Form --- */}
         <footer className="p-4 bg-white border-t border-slate-200">
           <form onSubmit={handleSend} className="grid grid-cols-2 gap-4">
-            {/* Required Fields */}
             <input type="text" name="item" value={formData.item} onChange={handleInputChange} placeholder="* Your clothing item" required className="col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
             <input type="text" name="vibe" value={formData.vibe} onChange={handleInputChange} placeholder="* Desired vibe (e.g. streetwear)" required className="col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
+            
             <select name="gender" value={formData.gender} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
               <option value="Male">Male</option><option value="Female">Female</option><option value="Unisex">Unisex</option>
             </select>
             
-            {/* Optional Fields */}
+            <select name="layering_preference" value={formData.layering_preference} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+              <option value="AI Decides">Let AI Decide Layers</option>
+              <option value="Suggest Layers">Suggest Layers</option>
+              <option value="No Layers">No Layers</option>
+            </select>
+            
             <select name="age_group" value={formData.age_group} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
               <option value="">Age group (optional)</option><option value="Teen (under 18)">Teen (&lt;18)</option><option value="Young Adult (18-25)">Young Adult (18-25)</option><option value="Adult (26-40)">Adult (26-40)</option><option value="Mature (40+)">Mature (40+)</option>
             </select>
             <select name="skin_colour" value={formData.skin_colour} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
               <option value="">Skin tone (optional)</option><option value="Fair/Light">Fair/Light</option><option value="Tan/Medium">Tan/Medium</option><option value="Dark/Deep">Dark/Deep</option>
             </select>
+            
             <input type="number" name="num_ideas" value={formData.num_ideas} onChange={handleInputChange} min="1" max="3" className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
-            <textarea name="more_details" value={formData.more_details} onChange={handleInputChange} placeholder="More details? (e.g., 'no shorts', 'make it colorful')" className="col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={2}/>
+            <textarea name="more_details" value={formData.more_details} onChange={handleInputChange} placeholder="More details? (e.g., 'no logos')" className="col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={2}/>
 
             <button type="submit" disabled={isLoading} className="col-span-2 p-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 disabled:bg-slate-400">
               {isLoading ? "Generating..." : "Get Suggestion"}

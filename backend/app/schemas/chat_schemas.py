@@ -11,8 +11,9 @@ class ChatRequest(BaseModel):
     # Optional fields
     age_group: Optional[str] = None
     skin_colour: Optional[str] = None
-    num_ideas: int = Field(default=1, ge=1, le=3) # Default 1, min 1, max 3
+    num_ideas: int = Field(default=1, ge=1, le=3)
     more_details: Optional[str] = None
+    layering_preference: str = "AI Decides" # New field with a default
 
 # --- Response Models ---
 class OutfitItem(BaseModel):

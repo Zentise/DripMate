@@ -15,13 +15,11 @@ async def handle_chat_request(request: ChatRequest):
         age_group=request.age_group,
         skin_colour=request.skin_colour,
         num_ideas=request.num_ideas,
-        more_details=request.more_details
+        more_details=request.more_details,
+        layering_preference=request.layering_preference # Pass new field
     )
     
-    # The Pydantic response_model will automatically handle validation.
-    # If 'outfits' key is missing or format is wrong, FastAPI will raise an error.
     if not suggestion.get("outfits"):
-        # This handles errors from our service, like connection issues
         error_detail = suggestion.get("error", "An unknown error occurred in the AI service.")
         raise HTTPException(status_code=500, detail=error_detail)
         
