@@ -1,7 +1,11 @@
 import axios from "axios";
 
+// Build baseURL dynamically based on the current hostname so it works on localhost and LAN
+const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const apiBase = `http://${host}:8000/api`;
+
 const apiClient = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: apiBase,
 });
 
 export const getOutfitSuggestion = async (formData) => {

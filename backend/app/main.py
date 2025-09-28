@@ -1,23 +1,25 @@
 from fastapi import FastAPI
-# --- NEW: Import the CORS middleware ---
 from fastapi.middleware.cors import CORSMiddleware
 from .api import chat_router
 
 app = FastAPI(title="DripMate API")
 
-# --- NEW: Define the list of allowed origins (your frontend's address) ---
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
-# --- NEW: Add the CORS middleware to your application ---
+# Allow localhost and typical private network ranges on any port
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_origin_regex=(
+        r"^https?://(localhost|127\.0\.0\.1|"
+        r"192\.168\.[0-9]{1,3}\.[0-9]{1,3}|"
+        r"10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|"
+        r"172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]{1,3}\.[0-9]{1,3})(:\d+)?$"
+    ),
     allow_credentials=True,
-    allow_methods=["*"], # Allows all methods
-    allow_headers=["*"], # Allows all headers
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 # Your existing router
