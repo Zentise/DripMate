@@ -2,6 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api import chat_router
 
+from app.database import models
+from app.database.database import engine
+
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI(title="DripMate API")
 
 # Allow localhost and typical private network ranges on any port
