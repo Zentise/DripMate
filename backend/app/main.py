@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import chat_router
+from .api import chat_router, wardrobe_router
 
 from app.database import models
 from app.database.database import engine
@@ -29,6 +29,7 @@ app.add_middleware(
 
 # Your existing router
 app.include_router(chat_router.router, prefix="/api", tags=["chat"])
+app.include_router(wardrobe_router.router, prefix="/api", tags=["wardrobe"])
 
 @app.get("/", tags=["root"])
 def read_root():
