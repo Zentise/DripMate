@@ -1,73 +1,142 @@
-import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import Wardrobe from './pages/Wardrobe.jsx';
-import Chat from './pages/Chat.jsx';
-import Fits from './pages/Fits.jsx';
-import Profile from './pages/Profile.jsx';
-import { AppProvider } from './state/AppContext.jsx';
+import { useState } from "react";
+import { getOutfitSuggestion } from "./api/dripMateAPI.js";
 
-const TabIcon = ({ name, active }) => {
-  const base = 'w-6 h-6';
-  const activeCls = active ? 'text-brand-500' : 'text-zinc-400';
-  switch (name) {
-    case 'wardrobe':
-      return (<svg className={`${base} ${activeCls}`} viewBox="0 0 24 24" fill="currentColor"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6zm4 2h8v8H8V8z"/></svg>);
-    case 'chat':
-      return (<svg className={`${base} ${activeCls}`} viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v10H7l-3 3V4z"/></svg>);
-    case 'fits':
-      return (<svg className={`${base} ${activeCls}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 21l-1.45-1.32C6.4 15.36 4 13.28 4 10.5 4 8.5 5.5 7 7.5 7c1.54 0 3.04.99 3.57 2.36h1.87C13.46 7.99 14.96 7 16.5 7 18.5 7 20 8.5 20 10.5c0 2.78-2.4 4.86-6.55 9.18L12 21z"/></svg>);
-    default:
-      return (<svg className={`${base} ${activeCls}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"/></svg>);
-  }
-};
-
-const BottomNav = () => {
-  const location = useLocation();
-  const tabs = [
-    { to: '/', label: 'Wardrobe', key: 'wardrobe' },
-    { to: '/chat', label: 'Chat', key: 'chat' },
-    { to: '/fits', label: 'Fits', key: 'fits' },
-    { to: '/profile', label: 'Profile', key: 'profile' },
-  ];
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-900/80 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/60 dark:bg-zinc-900 text-zinc-300">
-      <div className="mx-auto max-w-md grid grid-cols-4">
-        {tabs.map((t) => {
-          const active = location.pathname === t.to;
-          return (
-            <NavLink key={t.key} to={t.to} className="flex flex-col items-center py-2">
-              <TabIcon name={t.key} active={active} />
-              <span className={`text-xs mt-1 ${active ? 'text-brand-500' : 'text-zinc-400'}`}>{t.label}</span>
-            </NavLink>
-          );
-        })}
+// A component to render the Bot's special response (No changes needed here)
+const BotResponse = ({ content }) => {
+  if (content.error) {
+    return (
+      <div className="p-4 bg-red-100 rounded-lg">
+        <p className="font-bold text-red-800">⚠️ An Error Occurred</p>
+        <p className="text-sm text-red-600">{content.error}</p>
       </div>
-    </nav>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {content.outfits.map((outfit) => (
+        <div key={outfit.id} className="p-4 bg-slate-200 rounded-lg">
+          <p className="font-bold text-slate-800 mb-3">✨ Idea {outfit.id}</p>
+          <div className="space-y-2">
+            <div>
+              <p className="font-semibold">{outfit.item1.name}</p>
+              <p className="text-sm text-slate-600">{outfit.item1.reason}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{outfit.item2.name}</p>
+              <p className="text-sm text-slate-600">{outfit.item2.reason}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{outfit.footwear.name}</p>
+              <p className="text-sm text-slate-600">{outfit.footwear.reason}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 };
 
 function App() {
+  const [formData, setFormData] = useState({
+    item: "", vibe: "", gender: "Male",
+    age_group: "", skin_colour: "", num_ideas: 1, more_details: "",
+    layering_preference: "AI Decides"
+  });
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // NEW STATE: To control the visibility of the input form
+  const [isInputVisible, setIsInputVisible] = useState(true);
+  
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!formData.item || !formData.vibe || !formData.gender || isLoading) return;
+    
+    const userMessage = { sender: "user", text: `Getting suggestions for: ${formData.item}` };
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    const botResponse = await getOutfitSuggestion(formData);
+    const botMessage = { sender: "bot", content: botResponse };
+    setMessages(prev => [...prev, botMessage]);
+    setIsLoading(false);
+    
+    // MODIFIED: Hide the input form after getting a response
+    setIsInputVisible(false);
+  };
+
   return (
-    <AppProvider>
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-16">
-        <header className="sticky top-0 z-40 bg-zinc-950/70 backdrop-blur border-b border-zinc-800">
-          <div className="mx-auto max-w-md px-4 py-3 flex items-center justify-between">
-            <h1 className="text-lg font-bold tracking-tight">DripMate</h1>
-            <span className="text-xs text-zinc-400">AI Stylist</span>
-          </div>
+    <div className="bg-slate-50 min-h-screen w-full font-sans">
+      <div className="container-responsive mx-auto w-full max-w-screen-xl flex flex-col min-h-screen">
+        
+        <header className="py-4 text-center">
+          {/* MODIFIED: Responsive font size for the main title */}
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">DripMate</h1>
+          <p className="text-slate-500">Your Evolved AI Personal Stylist</p>
         </header>
 
-        <main className="mx-auto max-w-md px-4 pt-4 pb-6">
-          <Routes>
-            <Route path="/" element={<Wardrobe />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/fits" element={<Fits />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
+        {/* The chat message area is flexible and works well on all screen sizes */}
+        <main className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4">
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`chat-bubble p-3 rounded-lg shadow-sm ${msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}>
+                {msg.sender === 'user' ? msg.text : <BotResponse content={msg.content} />}
+              </div>
+            </div>
+          ))}
+          {isLoading && <div className="flex justify-start"><div className="bg-white p-3 rounded-lg shadow-sm"><p className="text-slate-500 animate-pulse">DripMate is thinking...</p></div></div>}
         </main>
+        
+        {/* MODIFIED: The footer now conditionally renders either the form or a button */}
+        <footer className="p-4 bg-white border-t border-slate-200">
+          {isInputVisible ? (
+            <form onSubmit={handleSend} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* MODIFIED: Inputs now span 1 column on mobile and 2 on small screens and up */}
+              <input type="text" name="item" value={formData.item} onChange={handleInputChange} placeholder="* Your clothing item" required className="col-span-1 sm:col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
+              <input type="text" name="vibe" value={formData.vibe} onChange={handleInputChange} placeholder="* Desired vibe (e.g. streetwear)" required className="col-span-1 sm:col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
+              
+              <select name="gender" value={formData.gender} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="Male">Male</option><option value="Female">Female</option><option value="Unisex">Unisex</option>
+              </select>
+              
+              <select name="layering_preference" value={formData.layering_preference} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="AI Decides">Let AI Decide Layers</option>
+                <option value="Suggest Layers">Suggest Layers</option>
+                <option value="No Layers">No Layers</option>
+              </select>
+              
+              <select name="age_group" value={formData.age_group} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Age group (optional)</option><option value="Teen (under 18)">Teen (&lt;18)</option><option value="Young Adult (18-25)">Young Adult (18-25)</option><option value="Adult (26-40)">Adult (26-40)</option><option value="Mature (40+)">Mature (40+)</option>
+              </select>
+              <select name="skin_colour" value={formData.skin_colour} onChange={handleInputChange} className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Skin tone (optional)</option><option value="Fair/Light">Fair/Light</option><option value="Tan/Medium">Tan/Medium</option><option value="Dark/Deep">Dark/Deep</option>
+              </select>
+              
+              <input type="number" name="num_ideas" value={formData.num_ideas} onChange={handleInputChange} min="1" max="3" className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"/>
+              <textarea name="more_details" value={formData.more_details} onChange={handleInputChange} placeholder="More details? (e.g., 'no logos')" className="col-span-1 sm:col-span-2 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" rows={2}/>
 
-        <BottomNav />
+              <button type="submit" disabled={isLoading} className="col-span-1 sm:col-span-2 p-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors">
+                {isLoading ? "Generating..." : "Get Suggestion"}
+              </button>
+            </form>
+          ) : (
+            // This button shows up when the form is minimized
+            <button 
+              onClick={() => setIsInputVisible(true)}
+              className="w-full p-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              ✨ Get a New Suggestion
+            </button>
+          )}
+        </footer>
       </div>
-    </AppProvider>
+    </div>
   );
 }
 

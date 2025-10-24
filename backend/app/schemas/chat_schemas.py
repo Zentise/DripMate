@@ -22,10 +22,9 @@ class OutfitItem(BaseModel):
 
 class Outfit(BaseModel):
     id: int
-    top: Optional[OutfitItem] = None
-    bottom: Optional[OutfitItem] = None
-    layer: Optional[OutfitItem] = None
-    footwear: Optional[OutfitItem] = None
+    item1: OutfitItem
+    item2: OutfitItem
+    footwear: OutfitItem
 
 class ChatResponse(BaseModel):
     outfits: List[Outfit]
