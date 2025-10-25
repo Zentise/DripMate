@@ -20,3 +20,46 @@ export const getOutfitSuggestion = async (formData) => {
     return { error: `Could not get a suggestion. ${detail}` };
   }
 };
+
+// Wardrobe APIs
+export const listWardrobe = async () => {
+  const res = await apiClient.get("/wardrobe");
+  return res.data;
+};
+
+export const addWardrobeItem = async (item) => {
+  const res = await apiClient.post("/wardrobe", item);
+  return res.data;
+};
+
+export const updateWardrobeItem = async (id, item) => {
+  const res = await apiClient.put(`/wardrobe/${id}`, item);
+  return res.data;
+};
+
+export const deleteWardrobeItem = async (id) => {
+  const res = await apiClient.delete(`/wardrobe/${id}`);
+  return res.data;
+};
+
+// Favorites APIs
+export const listFavorites = async () => {
+  const res = await apiClient.get("/favorites");
+  return res.data;
+};
+
+export const saveFavorite = async (payload) => {
+  const res = await apiClient.post("/favorites", payload);
+  return res.data;
+};
+
+export const deleteFavorite = async (id) => {
+  const res = await apiClient.delete(`/favorites/${id}`);
+  return res.data;
+};
+
+// Profile API
+export const getProfile = async () => {
+  const res = await apiClient.get("/profile");
+  return res.data;
+};

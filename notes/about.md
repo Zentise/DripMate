@@ -1,6 +1,6 @@
 Project Title:   DripMate
 Project Type:    Full-Stack AI Software Application
-Author:          (Your Name)
+Author:          Shrijith S Menon
 Status:          Stage II Complete
 
 1. Project Introduction

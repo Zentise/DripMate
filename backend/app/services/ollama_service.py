@@ -1,6 +1,7 @@
 import requests
 import json
-from typing import Optional
+import re
+from typing import Optional, List, Dict
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
@@ -12,7 +13,8 @@ def get_style_suggestion(
     skin_colour: Optional[str] = None,
     num_ideas: int = 1,
     more_details: Optional[str] = None,
-    layering_preference: str = "AI Decides" # New parameter
+    layering_preference: str = "AI Decides", # New parameter
+    wardrobe: Optional[Dict[str, List[str]]] = None,  # Optional categorized wardrobe items
 ) -> dict:
 
     # --- V3 PROMPT: Added Layering Preference Logic ---
@@ -43,12 +45,26 @@ def get_style_suggestion(
     ])
     if more_details: prompt_parts.append(f"- Additional Details/Constraints: {more_details}")
     
+    # If wardrobe provided, restrict selections to provided lists
+    if wardrobe:
+        prompt_parts.extend([
+            "\n**WARDROBE CONSTRAINT:**",
+            "You MUST ONLY use items from the user's wardrobe lists below.",
+            "- The user's wardrobe is categorized; choose from these exact names.",
+            f"- CLOTHING OPTIONS: {', '.join(wardrobe.get('clothing', []) or ['(none)'])}",
+            f"- ACCESSORIES OPTIONS: {', '.join(wardrobe.get('accessory', []) or ['(none)'])}",
+            f"- FOOTWEAR OPTIONS: {', '.join(wardrobe.get('footwear', []) or ['(none)'])}",
+            "If a category is empty, do your best with available categories but do NOT invent items outside the lists.",
+        ])
+    
     prompt_parts.extend([
         f"\n**YOUR TASK:**",
         f"You MUST generate exactly {num_ideas} distinct outfit idea(s).",
         "For each idea, suggest three complementary items: 'item1', 'item2', and 'footwear'.",
         "For each item, provide a 'name' and a 'reason' for your choice.",
         "The entire response MUST be a single, valid JSON object.",
+        "Use DOUBLE QUOTES for all property names and string values.",
+        "NO markdown, NO code fences, NO comments, and NO trailing commas.",
         "\n**JSON OUTPUT FORMAT EXAMPLE (if user asks for 2 ideas):**",
         """{
   "outfits": [
@@ -78,7 +94,58 @@ def get_style_suggestion(
         response = requests.post(OLLAMA_URL, json=payload, timeout=90)
         response.raise_for_status()
         response_data = response.json()
-        return json.loads(response_data['response'])
+        raw = response_data.get('response', '') if isinstance(response_data, dict) else ''
+
+        # Try strict parse first
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+
+        # Attempt to extract JSON from code fences or surrounding text and sanitize
+        cleaned = _sanitize_llm_json(raw)
+        return json.loads(cleaned)
     except Exception as e:
         print(f"An error occurred: {e}")
         return {"error": "An error occurred while getting the AI suggestion."}
+
+
+def _sanitize_llm_json(text: str) -> str:
+    """Best-effort cleanup when LLM returns JSON wrapped in markdown or with minor issues.
+    - Remove code fences ```json ... ```
+    - Strip JS/markdown-style comments
+    - Remove trailing commas before } or ]
+    - Extract the largest {...} block if extra prose surrounds it
+    """
+    if not isinstance(text, str):
+        return '{}'
+
+    s = text.strip()
+
+    # Remove code fences
+    if '```' in s:
+        parts = s.split('```')
+        # Look for a block that likely contains JSON
+        for i in range(len(parts)):
+            block = parts[i].strip()
+            if block.lower().startswith('json'):
+                block = block[4:].strip()
+            if block.startswith('{') and block.endswith('}'):
+                s = block
+                break
+
+    # If still has prose, try to take the largest balanced JSON object substring
+    if not (s.startswith('{') and s.endswith('}')):
+        first = s.find('{')
+        last = s.rfind('}')
+        if first != -1 and last != -1 and last > first:
+            s = s[first:last+1]
+
+    # Remove // line comments
+    s = re.sub(r"^\s*//.*$", "", s, flags=re.MULTILINE)
+    # Remove /* ... */ comments
+    s = re.sub(r"/\*.*?\*/", "", s, flags=re.DOTALL)
+    # Remove trailing commas before } or ]
+    s = re.sub(r",(\s*[}\]])", r"\1", s)
+
+    return s

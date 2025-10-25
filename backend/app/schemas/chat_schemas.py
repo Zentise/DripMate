@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
     num_ideas: int = Field(default=1, ge=1, le=3)
     more_details: Optional[str] = None
     layering_preference: str = "AI Decides" # New field with a default
+    use_wardrobe_only: bool = False
 
 # --- Response Models ---
 class OutfitItem(BaseModel):
