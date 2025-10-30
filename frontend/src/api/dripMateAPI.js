@@ -63,3 +63,13 @@ export const getProfile = async () => {
   const res = await apiClient.get("/profile");
   return res.data;
 };
+
+// Vision API
+export const analyzeImage = async (file) => {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await apiClient.post("/vision/analyze", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};

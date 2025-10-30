@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api import chat_router
 from .api import wardrobe_router, favorites_router, profile_router
+from .api import vision_router
 from .database import Base, engine
 from . import models  # noqa: F401 - ensure models are imported so metadata includes them
 
@@ -33,6 +34,7 @@ app.include_router(chat_router.router, prefix="/api", tags=["chat"])
 app.include_router(wardrobe_router.router, prefix="/api", tags=["wardrobe"])
 app.include_router(favorites_router.router, prefix="/api", tags=["favorites"])
 app.include_router(profile_router.router, prefix="/api", tags=["profile"])
+app.include_router(vision_router.router, prefix="/api", tags=["vision"])
 
 @app.get("/", tags=["root"])
 def read_root():

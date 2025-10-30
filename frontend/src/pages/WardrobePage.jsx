@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listWardrobe, addWardrobeItem, deleteWardrobeItem } from "../api/dripMateAPI";
+import { listWardrobe, addWardrobeItem, deleteWardrobeItem, analyzeImage } from "../api/dripMateAPI";
 
 export default function WardrobePage() {
   const [items, setItems] = useState([]);
@@ -32,6 +32,27 @@ export default function WardrobePage() {
     await fetchItems();
   };
 
+  const handleAnalyze = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const attrs = await analyzeImage(file);
+      setForm(prev => ({
+        ...prev,
+        category: attrs.category || prev.category,
+        name: attrs.name || prev.name,
+        color: attrs.color || prev.color,
+        season: attrs.season || prev.season,
+        notes: [attrs.pattern, attrs.style].filter(Boolean).join(", ") || prev.notes,
+      }));
+    } catch (err) {
+      console.error("Image analysis failed", err);
+    } finally {
+      // reset the input so selecting the same file again triggers change
+      e.target.value = "";
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!confirm("Delete this item?")) return;
     await deleteWardrobeItem(id);
@@ -42,6 +63,11 @@ export default function WardrobePage() {
     <div className="p-4 pb-24 max-w-screen-md mx-auto">
       <h2 className="text-xl font-bold mb-3 text-slate-100">Your Wardrobe</h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-base-900/70 p-4 border border-slate-800 rounded-xl shadow-innerGlow backdrop-blur">
+        <label className="sm:col-span-2 flex items-center gap-3 text-slate-300">
+          <span className="inline-block px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700">Analyze Photo</span>
+          <input type="file" accept="image/*" onChange={handleAnalyze} className="hidden" />
+          <span className="text-xs text-slate-500">Use a photo to pre-fill fields</span>
+        </label>
         <select name="category" value={form.category} onChange={handleChange} className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl">
           <option value="clothing">Clothing</option>
           <option value="footwear">Footwear</option>
