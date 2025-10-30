@@ -98,13 +98,14 @@ def get_style_suggestion(
 
         # Try strict parse first
         try:
-            return json.loads(raw)
+            data = json.loads(raw)
         except Exception:
-            pass
+            # Attempt to extract JSON from code fences or surrounding text and sanitize
+            cleaned = _sanitize_llm_json(raw)
+            data = json.loads(cleaned)
 
-        # Attempt to extract JSON from code fences or surrounding text and sanitize
-        cleaned = _sanitize_llm_json(raw)
-        return json.loads(cleaned)
+        # Normalize to ensure required fields are strings (avoid response validation errors)
+        return _normalize_outfits(data)
     except Exception as e:
         print(f"An error occurred: {e}")
         return {"error": "An error occurred while getting the AI suggestion."}
@@ -149,3 +150,47 @@ def _sanitize_llm_json(text: str) -> str:
     s = re.sub(r",(\s*[}\]])", r"\1", s)
 
     return s
+
+
+def _normalize_outfits(data: dict) -> dict:
+    """Ensure each outfit has item1, item2, and footwear with string name/reason.
+    If fields are missing or null, coerce to safe defaults. Also ensure sequential id.
+    """
+    result = {"outfits": []}
+    if not isinstance(data, dict):
+        return result
+    outfits = data.get("outfits")
+    if not isinstance(outfits, list):
+        return result
+
+    def _coerce_item(d):
+        if not isinstance(d, dict):
+            return {"name": "", "reason": ""}
+        name = d.get("name")
+        reason = d.get("reason")
+        # Coerce None to empty strings; cast non-strings to strings
+        name = "" if name is None else str(name)
+        reason = "" if reason is None else str(reason)
+        return {"name": name, "reason": reason}
+
+    for idx, o in enumerate(outfits, start=1):
+        if not isinstance(o, dict):
+            continue
+        item1 = _coerce_item(o.get("item1"))
+        item2 = _coerce_item(o.get("item2"))
+        footwear = _coerce_item(o.get("footwear"))
+
+        oid = o.get("id")
+        try:
+            oid = int(oid)
+        except Exception:
+            oid = len(result["outfits"]) + 1
+
+        result["outfits"].append({
+            "id": oid,
+            "item1": item1,
+            "item2": item2,
+            "footwear": footwear,
+        })
+
+    return result
