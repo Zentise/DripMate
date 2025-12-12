@@ -71,7 +71,7 @@ const BottomNav = () => {
     >
       <div className="mx-auto max-w-screen-lg flex relative">
         <Tab to="/wardrobe" icon={iconWardrobe} label="Wardrobe" />
-        <Tab to="/" end icon={iconChat} label="Chat" />
+        <Tab to="/chat" icon={iconChat} label="Chat" />
         <Tab to="/saved" icon={iconSaved} label="Saved" />
         <Tab to="/profile" icon={iconProfile} label="Profile" />
       </div>

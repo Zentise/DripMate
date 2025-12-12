@@ -4,7 +4,35 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-primary)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+      {/* Header */}
+      <header className="px-4 py-6 md:px-8 md:py-8" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <h1 className="text-2xl md:text-3xl font-bold">DripMate</h1>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 md:px-6 md:py-2.5 rounded-lg font-medium"
+              style={{ 
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-primary)'
+              }}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="px-4 py-2 md:px-6 md:py-2.5 rounded-lg font-bold text-black"
+              style={{ background: 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)' }}
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-4">
       <div className="max-w-4xl w-full text-center">
         {/* Hero Section */}
         <div className="fade-in mb-12">
@@ -68,6 +96,7 @@ export default function HomePage() {
             Sign In
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
