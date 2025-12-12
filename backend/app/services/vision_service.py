@@ -1,5 +1,21 @@
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List
+import json
+
+try:
+    import google.generativeai as genai
+    import os
+
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if GEMINI_API_KEY:
+        genai.configure(api_key=GEMINI_API_KEY)
+        _gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+        
+    else:
+        _gemini_model = None
+except Exception as _e:
+    print(f"[vision] Google Gemini not available: {_e}")
+    _gemini_model = None
 
 try:
     import torch
@@ -275,3 +291,140 @@ def _guess_season(name: Optional[str]) -> Optional[str]:
     if any(w in n for w in ["blazer", "cardigan", "denim", "bomber"]):
         return "fall"
     return "all-season"
+
+
+def analyze_clothing_with_gemini(image_path: str) -> Dict[str, Optional[str]]:
+    """
+    Analyze clothing image using Gemini Vision API.
+    Returns: {category, name, color, pattern, style, season, description}
+    """
+    if not _gemini_model:
+        return {
+            "category": None,
+            "name": None,
+            "color": None,
+            "pattern": None,
+            "style": None,
+            "season": None,
+            "description": "Gemini API not configured"
+        }
+    
+    try:
+        img = Image.open(image_path)
+        prompt = """Analyze this clothing item image and provide a JSON response with the following fields:
+- category: one of "clothing", "footwear", or "accessory"
+- name: specific item name (e.g., "black hoodie", "blue jeans", "white sneakers")
+- color: dominant color (e.g., "black", "blue", "white", "red")
+- pattern: pattern type if visible (e.g., "striped", "plain", "floral", "checked") or null
+- style: style category (e.g., "casual", "formal", "streetwear", "sporty") or null
+- season: best season (e.g., "summer", "winter", "all-season", "fall", "spring") or null
+- description: brief 1-2 sentence description of the item
+
+Return ONLY valid JSON, no markdown or extra text."""
+        
+        response = _gemini_model.generate_content([prompt, img])
+        text = response.text.strip()
+        
+        # Clean up response - remove markdown code blocks if present
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        
+        result = json.loads(text)
+        return result
+    except Exception as e:
+        print(f"[vision] Gemini analysis error: {e}")
+        return {
+            "category": None,
+            "name": None,
+            "color": None,
+            "pattern": None,
+            "style": None,
+            "season": None,
+            "description": f"Analysis failed: {str(e)}"
+        }
+
+
+def get_outfit_from_image(image_path: str, user_prompt: Optional[str] = None, wardrobe_items: Optional[List[Dict]] = None) -> Dict:
+    """
+    Analyze a clothing item image and suggest complete outfit combinations.
+    Returns: {detected_item, outfits: [{name, item1, item2, footwear, accessories, reason}]}
+    """
+    if not _gemini_model:
+        return {
+            "error": "Gemini API not configured. Please set GEMINI_API_KEY environment variable.",
+            "detected_item": None,
+            "outfits": []
+        }
+    
+    try:
+        img = Image.open(image_path)
+        
+        # First, analyze the clothing item
+        detected = analyze_clothing_with_gemini(image_path)
+        
+        # Build wardrobe context if provided
+        wardrobe_context = ""
+        if wardrobe_items:
+            wardrobe_list = "\n".join([
+                f"- {item.get('category', 'item')}: {item.get('name', 'unknown')} ({item.get('color', 'color unknown')})"
+                for item in wardrobe_items
+            ])
+            wardrobe_context = f"\n\nUser's wardrobe items:\n{wardrobe_list}\n\nPlease suggest outfits using items from this wardrobe when possible."
+        
+        # Build outfit suggestion prompt
+        user_context = f" {user_prompt}" if user_prompt else ""
+        prompt = f"""Based on this clothing item image, suggest 3 complete outfit combinations.{user_context}
+
+Detected item: {detected.get('name', 'unknown item')} - {detected.get('description', '')}{wardrobe_context}
+
+Provide outfit suggestions in JSON format:
+{{
+  "outfits": [
+    {{
+      "name": "outfit name",
+      "item1": {{"name": "top/shirt item", "id": null}},
+      "item2": {{"name": "bottom/pants item", "id": null}},
+      "footwear": {{"name": "shoe item", "id": null}},
+      "accessories": {{"name": "accessory items", "id": null}},
+      "reason": "why this outfit works"
+    }}
+  ]
+}}
+
+Rules:
+1. Include the detected item in EVERY outfit suggestion
+2. Each outfit must have item1, item2, footwear, and accessories (can be "none" for accessories)
+3. Make suggestions practical, stylish, and complementary to the detected item
+4. Provide clear reasoning for each outfit
+5. Return ONLY valid JSON, no markdown or extra text"""
+        
+        response = _gemini_model.generate_content([prompt, img])
+        text = response.text.strip()
+        
+        # Clean up response
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        
+        result = json.loads(text)
+        
+        return {
+            "detected_item": detected,
+            "outfits": result.get("outfits", [])
+        }
+    except Exception as e:
+        print(f"[vision] Gemini outfit suggestion error: {e}")
+        return {
+            "error": f"Failed to generate outfit suggestions: {str(e)}",
+            "detected_item": None,
+            "outfits": []
+        }

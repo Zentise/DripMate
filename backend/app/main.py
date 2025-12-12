@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Load environment variables first
+from .load_env import load_env
+load_env()
+
 from .api import chat_router
 from .api import wardrobe_router, favorites_router, profile_router
 from .api import vision_router
+from .api import image_chat_router
+from .api import auth_router
 from .database import Base, engine
 from . import models  # noqa: F401 - ensure models are imported so metadata includes them
 
@@ -30,7 +37,9 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 
 # Routers
+app.include_router(auth_router.router, tags=["authentication"])
 app.include_router(chat_router.router, prefix="/api", tags=["chat"])
+app.include_router(image_chat_router.router, prefix="/api", tags=["chat"])
 app.include_router(wardrobe_router.router, prefix="/api", tags=["wardrobe"])
 app.include_router(favorites_router.router, prefix="/api", tags=["favorites"])
 app.include_router(profile_router.router, prefix="/api", tags=["profile"])

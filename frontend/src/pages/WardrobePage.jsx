@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { listWardrobe, addWardrobeItem, deleteWardrobeItem, analyzeImage } from "../api/dripMateAPI";
 
 export default function WardrobePage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({
     category: "clothing",
@@ -11,13 +13,29 @@ export default function WardrobePage() {
     image_url: "",
     notes: "",
   });
+  const [isFormMinimized, setIsFormMinimized] = useState(true);
 
   const fetchItems = async () => {
-    const data = await listWardrobe();
-    setItems(data);
+    try {
+      const data = await listWardrobe();
+      setItems(data);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      }
+    }
   };
 
-  useEffect(() => { fetchItems(); }, []);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    fetchItems();
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,6 +48,7 @@ export default function WardrobePage() {
     await addWardrobeItem(form);
     setForm({ category: "clothing", name: "", color: "", season: "", image_url: "", notes: "" });
     await fetchItems();
+    setIsFormMinimized(true);
   };
 
   const handleAnalyze = async (e) => {
@@ -48,7 +67,6 @@ export default function WardrobePage() {
     } catch (err) {
       console.error("Image analysis failed", err);
     } finally {
-      // reset the input so selecting the same file again triggers change
       e.target.value = "";
     }
   };
@@ -60,39 +78,158 @@ export default function WardrobePage() {
   };
 
   return (
-    <div className="p-4 pb-24 max-w-screen-md mx-auto">
-      <h2 className="text-xl font-bold mb-3 text-slate-100">Your Wardrobe</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-base-900/70 p-4 border border-slate-800 rounded-xl shadow-innerGlow backdrop-blur">
-        <label className="sm:col-span-2 flex items-center gap-3 text-slate-300">
-          <span className="inline-block px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700">Analyze Photo</span>
-          <input type="file" accept="image/*" onChange={handleAnalyze} className="hidden" />
-          <span className="text-xs text-slate-500">Use a photo to pre-fill fields</span>
-        </label>
-        <select name="category" value={form.category} onChange={handleChange} className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl">
-          <option value="clothing">Clothing</option>
-          <option value="footwear">Footwear</option>
-          <option value="accessory">Accessory</option>
-        </select>
-        <input name="name" value={form.name} onChange={handleChange} placeholder="* Name (e.g., black hoodie)" className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl sm:col-span-1" required />
-        <input name="color" value={form.color} onChange={handleChange} placeholder="Color (optional)" className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl" />
-        <input name="season" value={form.season} onChange={handleChange} placeholder="Season (e.g., all-season)" className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl" />
-        <input name="image_url" value={form.image_url} onChange={handleChange} placeholder="Image URL (optional)" className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl sm:col-span-2" />
-        <input name="notes" value={form.notes} onChange={handleChange} placeholder="Notes (optional)" className="p-2 border border-slate-700 bg-slate-900/70 rounded-xl sm:col-span-2" />
-        <button type="submit" className="p-2 rounded-xl bg-gradient-to-r from-cyan via-neon to-fuchsia text-slate-900 font-bold sm:col-span-2">Add Item</button>
-      </form>
-
-      <div className="space-y-2">
-        {items.map((it) => (
-          <div key={it.id} className="p-3 bg-base-900/70 border border-slate-800 rounded-xl flex items-center justify-between shadow-innerGlow">
-            <div>
-              <p className="font-semibold capitalize text-slate-100">{it.category}: <span className="font-normal">{it.name}</span></p>
-              <p className="text-xs text-slate-400">{[it.color, it.season].filter(Boolean).join(" • ")}</p>
+    <div className="min-h-screen pb-24 px-4 md:px-6" style={{ background: 'var(--bg-primary)' }}>
+      <div className="max-w-4xl mx-auto py-6 md:py-8">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8 fade-in">Your Wardrobe</h2>
+        
+        {/* Add Item Form - Collapsible */}
+        {isFormMinimized ? (
+          /* Minimized - Show expand button */
+          <button
+            onClick={() => setIsFormMinimized(false)}
+            className="w-full mb-8 py-4 px-6 rounded-2xl font-semibold text-lg transition-all hover:scale-[1.02] fade-in"
+            style={{ 
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-primary)'
+            }}
+          >
+            ➕ Add New Item to Wardrobe
+          </button>
+        ) : (
+          /* Expanded Form */
+          <div className="mb-8 slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl md:text-2xl font-semibold">Add New Item</h3>
+              <button
+                type="button"
+                onClick={() => setIsFormMinimized(true)}
+                className="px-4 py-2 rounded-lg text-sm transition-all"
+                style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+              >
+                ✕ Minimize
+              </button>
             </div>
-            <button className="text-red-400 hover:text-red-300" onClick={() => handleDelete(it.id)}>Delete</button>
+            
+            <form onSubmit={handleSubmit} className="card" style={{ background: 'var(--bg-card)' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Image Analyzer */}
+                <label className="md:col-span-2 flex items-center gap-3 p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all hover:scale-[1.01]"
+                  style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-tertiary)' }}>
+                  <span className="text-2xl">📷</span>
+                  <div className="flex-1">
+                    <span className="font-medium block">Analyze Photo</span>
+                    <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      Use a photo to pre-fill fields
+                    </span>
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleAnalyze} className="hidden" />
+                </label>
+                
+                <select name="category" value={form.category} onChange={handleChange}>
+                  <option value="clothing">Clothing</option>
+                  <option value="footwear">Footwear</option>
+                  <option value="accessory">Accessory</option>
+                </select>
+                
+                <input 
+                  name="name" 
+                  value={form.name} 
+                  onChange={handleChange} 
+                  placeholder="* Name (e.g., black hoodie)" 
+                  required 
+                />
+                
+                <input 
+                  name="color" 
+                  value={form.color} 
+                  onChange={handleChange} 
+                  placeholder="Color (optional)" 
+                />
+                
+                <input 
+                  name="season" 
+                  value={form.season} 
+                  onChange={handleChange} 
+                  placeholder="Season (e.g., all-season)" 
+                />
+                
+                <input 
+                  name="image_url" 
+                  value={form.image_url} 
+                  onChange={handleChange} 
+                  placeholder="Image URL (optional)" 
+                  className="md:col-span-2"
+                />
+                
+                <input 
+                  name="notes" 
+                  value={form.notes} 
+                  onChange={handleChange} 
+                  placeholder="Notes (optional)" 
+                  className="md:col-span-2"
+                />
+                
+                <button 
+                  type="submit" 
+                  className="md:col-span-2 py-3 font-bold text-black"
+                  style={{ background: 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)' }}
+                >
+                  ➕ Add Item
+                </button>
+              </div>
+            </form>
           </div>
-        ))}
-        {items.length === 0 && <p className="text-slate-400">Your wardrobe is empty. Add some items above.</p>}
+        )}
+
+        {/* Wardrobe Items List */}
+        <div className="space-y-3 md:space-y-4">
+          <h3 className="text-xl md:text-2xl font-semibold mb-4" style={{ color: 'var(--text-secondary)' }}>
+            {items.length} {items.length === 1 ? 'Item' : 'Items'}
+          </h3>
+          
+          {items.map((it, idx) => (
+            <div 
+              key={it.id} 
+              className="card hover-lift flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 fade-in"
+              style={{ animationDelay: `${idx * 0.05}s` }}
+            >
+              <div className="flex-1">
+                <p className="font-semibold capitalize text-lg md:text-xl mb-1">
+                  <span style={{ color: 'var(--text-secondary)' }}>{it.category}:</span> {it.name}
+                </p>
+                <div className="flex flex-wrap gap-2 text-sm md:text-base" style={{ color: 'var(--text-tertiary)' }}>
+                  {it.color && <span className="px-2 py-1 rounded-lg" style={{ background: 'var(--bg-tertiary)' }}>{it.color}</span>}
+                  {it.season && <span className="px-2 py-1 rounded-lg" style={{ background: 'var(--bg-tertiary)' }}>{it.season}</span>}
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => handleDelete(it.id)}
+                className="px-4 py-2 text-sm font-semibold transition-all hover:scale-105"
+                style={{ 
+                  background: 'var(--bg-tertiary)', 
+                  color: '#ff4444',
+                  border: '1px solid var(--border-primary)'
+                }}
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          ))}
+          
+          {items.length === 0 && (
+            <div className="card text-center py-12" style={{ background: 'var(--bg-tertiary)' }}>
+              <p className="text-xl mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Your wardrobe is empty
+              </p>
+              <p style={{ color: 'var(--text-tertiary)' }}>
+                Add some items above to get started
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

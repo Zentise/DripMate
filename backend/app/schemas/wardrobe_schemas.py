@@ -62,5 +62,8 @@ class UserProfileOut(BaseModel):
     id: int
     name: str
     email: Optional[str] = None
+    gender: Optional[str] = None
+    age_group: Optional[str] = None
+    skin_colour: Optional[str] = None
     wardrobe_count: int
     favorites_count: int

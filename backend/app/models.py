@@ -17,7 +17,12 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), default="Guest")
-    email = Column(String(255), unique=True, nullable=True)
+    email = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    gender = Column(String(50), nullable=True)
+    age_group = Column(String(50), nullable=True)
+    skin_colour = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     wardrobe_items = relationship("WardrobeItem", back_populates="user", cascade="all, delete-orphan")
     favorites = relationship("FavoriteOutfit", back_populates="user", cascade="all, delete-orphan")

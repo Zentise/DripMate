@@ -1,15 +1,32 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { listFavorites, deleteFavorite } from "../api/dripMateAPI";
 
 export default function SavedPage() {
+  const navigate = useNavigate();
   const [favs, setFavs] = useState([]);
 
   const fetchFavs = async () => {
-    const data = await listFavorites();
-    setFavs(data);
+    try {
+      const data = await listFavorites();
+      setFavs(data);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      }
+    }
   };
 
-  useEffect(() => { fetchFavs(); }, []);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    fetchFavs();
+  }, [navigate]);
 
   const handleDelete = async (id) => {
     if (!confirm("Remove this saved outfit?")) return;
@@ -18,29 +35,105 @@ export default function SavedPage() {
   };
 
   return (
-    <div className="p-4 pb-24 max-w-screen-md mx-auto">
-      <h2 className="text-xl font-bold mb-3 text-slate-100">Saved Outfits</h2>
-      <div className="space-y-3">
-        {favs.map((f) => (
-          <div key={f.id} className="p-3 bg-base-900/70 border border-slate-800 rounded-xl shadow-innerGlow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-100">{f.title || 'Saved outfit'}</p>
-                <p className="text-xs text-slate-400">{f.vibe || ''} {f.source_item ? `• base: ${f.source_item}` : ''}</p>
+    <div className="min-h-screen pb-24 px-4 md:px-6" style={{ background: 'var(--bg-primary)' }}>
+      <div className="max-w-4xl mx-auto py-6 md:py-8">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8 fade-in">Saved Outfits</h2>
+        
+        <div className="space-y-4 md:space-y-6">
+          {favs.map((f, idx) => (
+            <div 
+              key={f.id} 
+              className="card hover-lift fade-in"
+              style={{ animationDelay: `${idx * 0.05}s` }}
+            >
+              {/* Header with title and delete button */}
+              <div className="flex items-start justify-between mb-4 pb-4" style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                <div className="flex-1">
+                  <h3 className="text-xl md:text-2xl font-semibold mb-2">
+                    {f.title || 'Saved Outfit'}
+                  </h3>
+                  <div className="flex flex-wrap gap-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                    {f.vibe && (
+                      <span className="px-3 py-1 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                        {f.vibe}
+                      </span>
+                    )}
+                    {f.source_item && (
+                      <span className="px-3 py-1 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                        Base: {f.source_item}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => handleDelete(f.id)}
+                  className="ml-4 px-4 py-2 text-sm font-semibold transition-all hover:scale-105"
+                  style={{ 
+                    background: 'var(--bg-tertiary)', 
+                    color: '#ff4444',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: '10px'
+                  }}
+                >
+                  🗑️ Delete
+                </button>
               </div>
-              <button className="text-red-400 hover:text-red-300" onClick={() => handleDelete(f.id)}>Delete</button>
+              
+              {/* Outfit Details */}
+              {f.payload && (
+                <div className="space-y-3">
+                  <div className="pb-3" style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                    <p className="font-semibold text-base md:text-lg mb-1">
+                      {f.payload.item1?.name || 'Item 1'}
+                    </p>
+                    {f.payload.item1?.reason && (
+                      <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
+                        {f.payload.item1.reason}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="pb-3" style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                    <p className="font-semibold text-base md:text-lg mb-1">
+                      {f.payload.item2?.name || 'Item 2'}
+                    </p>
+                    {f.payload.item2?.reason && (
+                      <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
+                        {f.payload.item2.reason}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="pt-1">
+                    <p className="font-semibold text-base md:text-lg mb-1">
+                      {f.payload.footwear?.name || 'Footwear'}
+                    </p>
+                    {f.payload.footwear?.reason && (
+                      <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
+                        {f.payload.footwear.reason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            {f.payload && (
-              <div className="mt-2 text-sm text-slate-200 space-y-1">
-                <p><span className="font-semibold text-slate-100">{f.payload.item1?.name}</span> – {f.payload.item1?.reason}</p>
-                <p><span className="font-semibold text-slate-100">{f.payload.item2?.name}</span> – {f.payload.item2?.reason}</p>
-                <p><span className="font-semibold text-slate-100">{f.payload.footwear?.name}</span> – {f.payload.footwear?.reason}</p>
-              </div>
-            )}
-          </div>
-        ))}
-        {favs.length === 0 && <p className="text-slate-400">No favorites yet. Save an outfit from the Chat.</p>}
+          ))}
+          
+          {favs.length === 0 && (
+            <div className="card text-center py-16" style={{ background: 'var(--bg-tertiary)' }}>
+              <div className="text-6xl mb-4">💾</div>
+              <p className="text-2xl mb-2" style={{ color: 'var(--text-secondary)' }}>
+                No favorites yet
+              </p>
+              <p className="text-lg" style={{ color: 'var(--text-tertiary)' }}>
+                Save an outfit from the Chat page to see it here
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

@@ -2,42 +2,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.database import get_db, Base, engine
+from app.database import get_db
 from app.models import User, WardrobeItem as WardrobeItemModel, ItemCategory as ItemCategoryModel
 from app.schemas.wardrobe_schemas import WardrobeItemCreate, WardrobeItemUpdate, WardrobeItemOut
-from sqlalchemy.exc import IntegrityError
+from app.api.auth_router import get_current_user
 
 router = APIRouter()
 
 
-def get_or_create_default_user(db: Session) -> User:
-    user = db.query(User).filter(User.id == 1).first()
-    if user:
-        return user
-    try:
-        user = User(id=1, name="Guest")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
-    except IntegrityError:
-        db.rollback()
-        # Another request created it concurrently; fetch again
-        return db.query(User).filter(User.id == 1).first()
-
-
 @router.get("/wardrobe", response_model=List[WardrobeItemOut])
-def list_wardrobe(db: Session = Depends(get_db)):
-    user = get_or_create_default_user(db)
-    items = db.query(WardrobeItemModel).filter(WardrobeItemModel.user_id == user.id).order_by(WardrobeItemModel.id.desc()).all()
+def list_wardrobe(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    items = db.query(WardrobeItemModel).filter(WardrobeItemModel.user_id == current_user.id).order_by(WardrobeItemModel.id.desc()).all()
     return items
 
 
 @router.post("/wardrobe", response_model=WardrobeItemOut)
-def add_wardrobe_item(payload: WardrobeItemCreate, db: Session = Depends(get_db)):
-    user = get_or_create_default_user(db)
+def add_wardrobe_item(
+    payload: WardrobeItemCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     item = WardrobeItemModel(
-        user_id=user.id,
+        user_id=current_user.id,
         category=ItemCategoryModel(payload.category.value),
         name=payload.name,
         color=payload.color,
@@ -52,9 +41,13 @@ def add_wardrobe_item(payload: WardrobeItemCreate, db: Session = Depends(get_db)
 
 
 @router.put("/wardrobe/{item_id}", response_model=WardrobeItemOut)
-def update_wardrobe_item(item_id: int, payload: WardrobeItemUpdate, db: Session = Depends(get_db)):
-    user = get_or_create_default_user(db)
-    item = db.query(WardrobeItemModel).filter(WardrobeItemModel.id == item_id, WardrobeItemModel.user_id == user.id).first()
+def update_wardrobe_item(
+    item_id: int,
+    payload: WardrobeItemUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    item = db.query(WardrobeItemModel).filter(WardrobeItemModel.id == item_id, WardrobeItemModel.user_id == current_user.id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -77,9 +70,12 @@ def update_wardrobe_item(item_id: int, payload: WardrobeItemUpdate, db: Session 
 
 
 @router.delete("/wardrobe/{item_id}")
-def delete_wardrobe_item(item_id: int, db: Session = Depends(get_db)):
-    user = get_or_create_default_user(db)
-    item = db.query(WardrobeItemModel).filter(WardrobeItemModel.id == item_id, WardrobeItemModel.user_id == user.id).first()
+def delete_wardrobe_item(
+    item_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    item = db.query(WardrobeItemModel).filter(WardrobeItemModel.id == item_id, WardrobeItemModel.user_id == current_user.id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     db.delete(item)
