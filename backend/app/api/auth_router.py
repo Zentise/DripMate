@@ -55,16 +55,14 @@ class UserResponse(BaseModel):
 
 # Helper functions
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Truncate password to 72 characters (bcrypt limitation)
-    if len(plain_password) > 72:
-        plain_password = plain_password[:72]
+    # Truncate password to 72 bytes (bcrypt limitation)
+    plain_password = plain_password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    # Truncate password to 72 characters (bcrypt limitation)
-    if len(password) > 72:
-        password = password[:72]
+    # Truncate password to 72 bytes (bcrypt limitation)
+    password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
     return pwd_context.hash(password)
 
 
@@ -87,10 +85,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("sub")
+        user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
+        user_id = int(user_id)
     except JWTError:
+        raise credentials_exception
+    except (ValueError, TypeError):
         raise credentials_exception
     
     user = db.query(User).filter(User.id == user_id).first()
@@ -155,7 +156,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.id}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     
     return {

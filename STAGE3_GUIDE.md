@@ -21,9 +21,8 @@ pip install google-generativeai python-multipart
 
 2. **Verify .env file**:
 The Gemini API key should be in `.env` at the project root:
-```
-GEMINI_API_KEY=AIzaSyAnsOLtBF8LuHmTPT6TvzCt8Kd246nYNw0
-```
+
+
 
 3. **Start the backend**:
 ```powershell
