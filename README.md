@@ -7,12 +7,13 @@
 
 ### Your AI-Powered Personal Stylist
 
-*Get instant, personalized outfit suggestions based on your actual wardrobe*
+*Get instant, personalized outfit suggestions powered by Google Gemini AI*
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
+[![Gemini](https://img.shields.io/badge/Google-Gemini_AI-4285F4.svg)](https://ai.google.dev/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 [Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [Usage](#-usage) • [Architecture](#-architecture) • [Roadmap](#-roadmap) • [Contributing](#-contributing)
@@ -23,9 +24,9 @@
 
 ## 🎯 What is DripMate?
 
-DripMate is a **full-stack web application** that solves the everyday problem of choosing what to wear. Unlike generic fashion apps that suggest clothes you don't own, DripMate builds outfit recommendations using **only the items in your personal wardrobe**.
+DripMate is a **full-stack web application** that solves the everyday problem of choosing what to wear. Powered by **Google Gemini AI**, it provides intelligent outfit recommendations using **only the items in your personal wardrobe**.
 
-Think of it as having a **personal stylist in your pocket** that knows your closet inside out.
+Think of it as having a **personal stylist in your pocket** that knows your closet inside out and understands fashion like a pro.
 
 ### 💡 The Problem We Solve
 
@@ -36,10 +37,11 @@ Think of it as having a **personal stylist in your pocket** that knows your clos
 
 ### ✨ The DripMate Solution
 
-- 🤖 **AI-Powered Styling**: Intelligent outfit combinations using Llama 3 8B
+- 🤖 **AI-Powered Styling**: Intelligent outfit combinations using Google Gemini AI (with Ollama fallback)
 - 👕 **Virtual Wardrobe**: Digital catalog of your actual clothes
-- 📸 **Image Recognition** (Stage III): Upload photos to instantly add items to your wardrobe
+- 📸 **Image Recognition**: Upload photos to instantly add items and get suggestions
 - 🎭 **Vibe-Based Suggestions**: Get outfits tailored to specific occasions and moods
+- 🎨 **Smart Model Selection**: Choose from multiple AI models for different needs
 - 📱 **Mobile-First Design**: Optimized for on-the-go styling decisions
 
 ---

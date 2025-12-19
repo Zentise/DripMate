@@ -242,8 +242,7 @@ function ChatPage() {
       const botMessage = { sender: "bot", content: botResponse };
       setMessages(prev => [...prev, botMessage]);
       setIsLoading(false);
-      setIsInputMinimized(tru=> [...prev, botMessage]);
-      setIsLoading(false);
+      setIsInputMinimized(true);
     }
   };
 
