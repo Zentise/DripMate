@@ -12,12 +12,8 @@ from sqlalchemy.orm import Session
 from db import get_db, User
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
-# Password hashing with bcrypt (truncate long passwords automatically)
-pwd_context = CryptContext(
-    schemes=["bcrypt"], 
-    deprecated="auto",
-    bcrypt__truncate_error=False
-)
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -30,9 +26,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """Hash a password."""
-    # Ensure password is encoded as UTF-8 bytes and truncate if needed
-    if isinstance(password, str):
-        password = password.encode('utf-8')[:72].decode('utf-8')
     return pwd_context.hash(password)
 
 
