@@ -7,13 +7,14 @@
 
 ### Your AI-Powered Personal Stylist
 
-*Get instant, personalized outfit suggestions powered by Google Gemini AI*
+*Get instant, personalized outfit suggestions powered by Groq LLaMA 3.3 70B + Gemini Vision*
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
-[![Gemini](https://img.shields.io/badge/Google-Gemini_AI-4285F4.svg)](https://ai.google.dev/)
+[![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-FF6B00.svg)](https://groq.com/)
+[![Gemini](https://img.shields.io/badge/Google-Gemini_Vision-4285F4.svg)](https://ai.google.dev/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 [Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [Usage](#-usage) • [Architecture](#-architecture) • [Roadmap](#-roadmap) • [Contributing](#-contributing)
@@ -24,9 +25,9 @@
 
 ## 🎯 What is DripMate?
 
-DripMate is a **full-stack web application** that solves the everyday problem of choosing what to wear. Powered by **Google Gemini AI**, it provides intelligent outfit recommendations using **only the items in your personal wardrobe**.
+DripMate is a **full-stack web application** that solves the everyday problem of choosing what to wear. Powered by **Groq's LLaMA 3.3 70B** for lightning-fast text suggestions and **Google Gemini Vision** for intelligent image analysis, it provides personalized outfit recommendations tailored to your style and wardrobe.
 
-Think of it as having a **personal stylist in your pocket** that knows your closet inside out and understands fashion like a pro.
+Think of it as having a **personal stylist in your pocket** that understands fashion like a pro, responds in milliseconds, and can even analyze clothing photos to build your digital wardrobe.
 
 ### 💡 The Problem We Solve
 
@@ -37,12 +38,14 @@ Think of it as having a **personal stylist in your pocket** that knows your clos
 
 ### ✨ The DripMate Solution
 
-- 🤖 **AI-Powered Styling**: Intelligent outfit combinations using Google Gemini AI (with Ollama fallback)
+- ⚡ **Lightning-Fast AI**: Groq LLaMA 3.3 70B delivers suggestions in under 2 seconds
+- 🔐 **Secure Authentication**: Personal accounts with JWT-based security
 - 👕 **Virtual Wardrobe**: Digital catalog of your actual clothes
-- 📸 **Image Recognition**: Upload photos to instantly add items and get suggestions
+- 📸 **Image Recognition**: Gemini Vision analyzes clothing photos instantly
 - 🎭 **Vibe-Based Suggestions**: Get outfits tailored to specific occasions and moods
-- 🎨 **Smart Model Selection**: Choose from multiple AI models for different needs
+- 🎨 **Dual AI Approach**: Text (Groq) + Vision (Gemini) for comprehensive styling
 - 📱 **Mobile-First Design**: Optimized for on-the-go styling decisions
+- 👤 **Personalized Profiles**: Save preferences for age, gender, and skin tone
 
 ---
 
@@ -50,44 +53,60 @@ Think of it as having a **personal stylist in your pocket** that knows your clos
 
 ### ✅ Current Features (Stage I & II - Complete)
 
-#### 🗨️ Freestyle Chat Mode
+#### � Authentication & User Management
+- Secure signup/login with JWT tokens
+- Personalized user profiles
+- Store preferences (gender, age group, skin tone)
+- Session management across devices
+
+#### 🗨️ Intelligent Chat Mode
 - Describe any clothing item and desired vibe
-- Get instant AI-generated outfit suggestions
-- Supports multiple outfit ideas per request
-- Customizable preferences (gender, age group, layering, etc.)
+- Get instant AI-generated outfit suggestions (< 2 seconds with Groq)
+- Supports 1-3 outfit ideas per request
+- Customizable preferences:
+  - Layering options (AI decides, with layers, no layers)
+  - Gender-specific styling
+  - Age-appropriate recommendations
+  - Skin tone complementary colors
+- **Two modes**: "For Yourself" (uses your profile) or "For Others"
 
 #### 👚 Virtual Wardrobe Management
 - Add, edit, and delete clothing items
 - Organize by category (clothing, footwear, accessories)
 - Tag items with color, season, and notes
-- **Wardrobe-Aware AI**: Suggestions use ONLY your saved items
+- **Wardrobe-Only Mode**: AI suggests outfits using ONLY your saved items
+- Quick item search and filtering
 
 #### ⭐ Favorite Outfits
 - Save outfit combinations you love
 - Quick access to go-to looks
 - Organized by vibe and source item
+- One-click recreation of saved outfits
 
-#### 👤 User Profile
+#### 👤 User Profile Dashboard
 - Track wardrobe size and favorite count
-- Personalized styling experience
+- Personalized styling based on saved preferences
+- Auto-fill profile data in suggestions
 
 ### 🚧 Upcoming Features (Stage III - In Progress)
 
-#### 📸 Image-Based Wardrobe Building
-- **Upload photos** of your clothes
-- **AI analyzes images** to extract:
-  - Category (top/bottom/dress/shoes/jacket/accessory)
-  - Primary colors
-  - Style/vibe (casual/formal/sporty)
-  - Pattern (solid/striped/printed)
-  - Suggested item name
-- **One-click add** to wardrobe with editable fields
-- **Computer Vision**: YOLOv5 + ResNet for offline processing
+#### 📸 Image-Based Outfit Suggestions (Implemented with Gemini Vision)
+- **Upload clothing photos** directly in chat
+- **AI analyzes images** using Gemini Vision to detect:
+  - Clothing item type and category
+  - Primary colors and patterns
+  - Style and season suitability
+  - Detailed descriptions
+- Get instant outfit suggestions based on the detected item
+- Supports wardrobe-only mode for image-based requests
 
-#### 🖼️ Multimodal Chat
-- Upload outfit inspiration images
-- Get AI analysis and styling suggestions
-- "Does this work?" validation for outfit ideas
+#### 🖼️ Enhanced Image Features (Coming Soon)
+- Add clothing items directly to wardrobe from photos
+- Bulk photo uploads
+- Background removal for cleaner item storage
+- Multiple items detection in single photo
+- Outfit validation: "Does this combination work?"
+- Style inspiration from fashion photos
 
 ---
 
@@ -95,15 +114,40 @@ Think of it as having a **personal stylist in your pocket** that knows your clos
 
 ### Chat Interface
 ```
-
 You: "I have a black hoodie. Give me a streetwear vibe outfit."
-DripMate:
-✨ Idea 1
-👕 Black hoodie (base)
-👖 Light blue denim jeans (contrast, casual)
-👟 White low-top sneakers (clean, versatile)
-Rating: 9/10
 
+DripMate: [Response in < 2 seconds]
+✨ Outfit Idea 1
+━━━━━━━━━━━━━━━━━━━━━━━
+👕 Oversized white graphic tee
+   → Layers under the hoodie for depth and style
+
+👖 Light-wash distressed jeans
+   → Creates contrast with dark hoodie, classic streetwear
+
+👟 White Air Force 1s
+   → Clean, iconic sneaker that completes the look
+
+💾 Save to Favorites
+```
+
+### Image Analysis
+```
+You: [Upload photo of clothing item]
+
+DripMate: [Gemini Vision analyzes]
+📸 Detected: Black leather jacket - Biker style with silver zippers
+
+✨ Outfit Idea 1
+━━━━━━━━━━━━━━━━━━━━━━━
+👕 White crew neck t-shirt
+   → Classic combo, lets the jacket shine
+
+👖 Black skinny jeans
+   → Sleek silhouette, edgy aesthetic
+
+👟 Black Chelsea boots
+   → Elevates the rock-inspired look
 ```
 
 ### Wardrobe Dashboard
@@ -121,9 +165,12 @@ Rating: 9/10
 #### **Backend**
 - **Framework**: FastAPI (Python 3.9+)
 - **Database**: SQLite with SQLAlchemy ORM
-- **AI Engine**: Ollama (running Llama 3 8B locally)
-- **Computer Vision**: YOLOv5 + ResNet (Stage III)
-- **Image Processing**: OpenCV, Pillow
+- **AI Engines**: 
+  - **Groq** (LLaMA 3.3 70B) - Text-based outfit suggestions
+  - **Google Gemini Vision** - Image analysis and detection
+- **Authentication**: JWT tokens with python-jose
+- **Password Security**: Bcrypt hashing
+- **Image Processing**: Pillow, base64 encoding
 
 #### **Frontend**
 - **Framework**: React 18 (Vite)
@@ -141,48 +188,63 @@ Rating: 9/10
 ```
 
 ┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Chat Page    │  │ Wardrobe     │  │ Favorites    │      │
-│  │              │  │ Management   │  │ Page         │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                     Frontend (React + Vite)                  │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐   │
+│  │ Login/    │ │ Chat      │ │ Wardrobe  │ │ Favorites │   │
+│  │ Signup    │ │ Page      │ │ Page      │ │ Page      │   │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘   │
 │                          │                                   │
-│                          │ Axios API Client                  │
+│                          │ Axios + JWT Auth                  │
 └──────────────────────────┼───────────────────────────────────┘
-│
-▼
+                           │
+                           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Backend (FastAPI)                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Chat Router  │  │ Wardrobe     │  │ Vision       │      │
-│  │              │  │ Router       │  │ Router       │      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
-│         │                  │                  │              │
-│         ▼                  ▼                  ▼              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Ollama       │  │ Database     │  │ Vision       │      │
-│  │ Service      │  │ (SQLAlchemy) │  │ Service      │      │
-│  │ (Llama 3)    │  │              │  │ (YOLOv5)     │      │
-│  └──────────────┘  └──────┬───────┘  └──────────────┘      │
-│                           │                                  │
-└───────────────────────────┼──────────────────────────────────┘
-│
-▼
-┌─────────────────┐
-│  SQLite DB      │
-│  (dripmate.db)  │
-└─────────────────┘
-
-```
-
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ Auth     │  │ Chat     │  │ Wardrobe │  │ Vision   │   │
+│  │ Routes   │  │ Routes   │  │ Routes   │  │ Routes   │   │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
+│       │             │               │             │         │
+│       │             ▼               ▼             ▼         │
+│       │      ┌─────────────┐ ┌──────────┐ ┌──────────┐    │
+│       │      │ Groq LLM    │ │ Database │ │ Gemini   │    │
+│       │      │ Service     │ │ Layer    │ │ Vision   │    │
+│       │      │ (LLaMA 3.3) │ │          │ │ Service  │    │
+│       │      └─────────────┘ └────┬─────┘ └──────────┘    │
+│       │                           │                        │
+│       └───────────────────────────┼────────────────────────┘
+│                                   │
+│                                   ▼
+│            ┌────────────────────────────────┐
+│            │   SQLite Database              │
+│            ├────────────────────────────────┤
+│            │ • users                        │
+│            │ • wardrobe_items               │
+│            │ • favorite_outfits             │
+│            └────────────────────────────────┘
+│                                   │
+└───────────────────────────────────┼─────────────────────────┘
+                                    │
+                    ┌───────────────┴───────────────┐
+                    │                               │
+                    ▼                               ▼
+            ┌───────────────┐             ┌──────────────┐
+            │ Groq API      │             │ Google AI    │
+            │ (Cloud)       │             │ Gemini API   │
+            │ LLaMA 3.3 70B │             │ (Cloud)      │
+            └───────────────┘             └──────────────┘
 ### Database Schema
 
-```
+```sql
 
 users
 ├── id (PK)
 ├── name
-└── email
+├── email (UNIQUE)
+├── hashed_password
+├── gender
+├── age_group
+└── skin_colour
 
 wardrobe_items
 ├── id (PK)
@@ -190,8 +252,7 @@ wardrobe_items
 ├── category (ENUM: clothing/footwear/accessory)
 ├── name
 ├── color
-├── season
-├── image_url
+├── season (ENUM: summer/winter/spring/fall/all-season)
 └── notes
 
 favorite_outfits
@@ -201,7 +262,7 @@ favorite_outfits
 ├── source_item
 ├── vibe
 ├── payload (JSON)
-└── created_at
+└── created_at (TIMESTAMP)
 
 ```
 
@@ -213,7 +274,8 @@ favorite_outfits
 
 - **Python 3.9+** ([Download](https://www.python.org/downloads/))
 - **Node.js 16+** ([Download](https://nodejs.org/))
-- **Ollama** ([Download](https://ollama.ai/download))
+- **Groq API Key** ([Get Free Key](https://console.groq.com/))
+- **Google Gemini API Key** ([Get Free Key](https://makersuite.google.com/app/apikey))
 - **Git**
 
 ### Step 1: Clone the Repository
@@ -227,50 +289,42 @@ cd DripMate
 
 ### Step 2: Backend Setup
 
-```
-
+```bash
 cd backend
 
 # Create virtual environment
-
 python -m venv venv
 
 # Activate virtual environment
-
 # On Windows:
-
 venv\Scripts\activate
-
 # On macOS/Linux:
-
 source venv/bin/activate
 
 # Install dependencies
-
 pip install -r requirements.txt
 
-# Optional: Seed sample wardrobe data
+# Create .env file with your API keys
+echo "GROQ_API_KEY=your_groq_api_key_here" > .env
+echo "GEMINI_API_KEY=your_gemini_api_key_here" >> .env
 
-python -m app.seed_wardrobe
-
+# Initialize database (runs automatically on first start)
 ```
 
-### Step 3: Install Ollama & Llama 3 Model
+### Step 3: Get API Keys
 
-```
+**Groq API Key (Free):**
+1. Visit [Groq Console](https://console.groq.com/)
+2. Sign up for a free account
+3. Navigate to API Keys section
+4. Create new API key
+5. Copy and paste into `.env` file
 
-
-# Download and install Ollama from https://ollama.ai/download
-
-# Pull Llama 3 model (8B parameter version)
-
-ollama pull llama3
-
-# Verify installation
-
-ollama list
-
-```
+**Gemini API Key (Free):**
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with Google account
+3. Click "Create API Key"
+4. Copy and paste into `.env` file
 
 ### Step 4: Frontend Setup
 
@@ -291,26 +345,15 @@ yarn install
 ### Step 5: Run the Application
 
 **Terminal 1 - Backend:**
-```
-
+```bash
 cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Terminal 2 - Ollama (if not running as service):**
-```
-
-ollama serve
-
-```
-
-**Terminal 3 - Frontend:**
-```
-
+**Terminal 2 - Frontend:**
+```bash
 cd frontend
 npm run dev
-
 ```
 
 ### Step 6: Access the App
@@ -436,25 +479,33 @@ DripMate/
 
 ### API Endpoints
 
+#### Authentication
+- `POST /signup` - Register new user
+- `POST /login` - Login and get JWT token
+- `GET /profile` - Get current user profile (requires auth)
+
 #### Chat & Styling
-- `POST /api/chat` - Get outfit suggestions
+- `POST /chat` - Get AI outfit suggestions (requires auth)
+  - Supports text-based requests (Groq)
+  - Customizable with user preferences
+- `POST /upload-image` - Analyze clothing image and get suggestions (requires auth)
+  - Uses Gemini Vision
+  - Returns detected item + outfit ideas
 
 #### Wardrobe Management
-- `GET /api/wardrobe` - List all wardrobe items
-- `POST /api/wardrobe` - Add new item
-- `PUT /api/wardrobe/{id}` - Update item
-- `DELETE /api/wardrobe/{id}` - Delete item
+- `GET /wardrobe` - List all wardrobe items (requires auth)
+- `POST /wardrobe` - Add new item (requires auth)
+- `PUT /wardrobe/{id}` - Update item (requires auth)
+- `DELETE /wardrobe/{id}` - Delete item (requires auth)
 
 #### Favorites
-- `GET /api/favorites` - List saved outfits
-- `POST /api/favorites` - Save outfit
-- `DELETE /api/favorites/{id}` - Remove favorite
+- `GET /favorites` - List saved outfits (requires auth)
+- `POST /favorites` - Save outfit (requires auth)
+- `DELETE /favorites/{id}` - Remove favorite (requires auth)
 
-#### Profile
-- `GET /api/profile` - Get user profile
-
-#### Computer Vision (Stage III)
-- `POST /api/wardrobe/analyze-photo` - Analyze clothing image
+#### System
+- `GET /` - API information and health check
+- `GET /models` - List available AI models and providers
 
 ---
 
@@ -462,15 +513,18 @@ DripMate/
 
 ### ✅ Phase 1: Text-Based MVP (Complete)
 - [x] Freestyle chat with AI styling
-- [x] Basic outfit generation
+- [x] Groq LLaMA 3.3 70B integration
 - [x] Multiple outfit ideas per request
+- [x] Customizable styling preferences
 
 ### ✅ Phase 2: Wardrobe Integration (Complete)
+- [x] User authentication system (JWT)
+- [x] Personalized user profiles
 - [x] Virtual wardrobe database
 - [x] Wardrobe CRUD operations
 - [x] Wardrobe-aware AI suggestions
 - [x] Favorites system
-- [x] User profile
+- [x] "For Yourself" vs "For Others" mode
 
 ### 🚧 Phase 3: Image-Based System (In Progress)
 - [ ] Photo upload for wardrobe items
@@ -558,10 +612,11 @@ git push origin feature/AmazingFeature
 
 ## 🐛 Known Issues
 
-- [ ] Ollama may consume significant RAM (8GB+ recommended)
-- [ ] First AI request takes ~5-10 seconds (model loading)
-- [ ] Image analysis (Stage III) requires GPU for optimal speed
+- [ ] First Gemini Vision request may take 3-5 seconds (API cold start)
+- [ ] Rate limits apply to free API tiers (Groq: 30 req/min, Gemini: 60 req/min)
+- [ ] Large images (>4MB) may need compression before upload
 - [ ] Mobile browser camera access requires HTTPS in production
+- [ ] Session expires after 7 days, requiring re-login
 
 ---
 
@@ -581,11 +636,12 @@ Project Link: [https://github.com/Zentise/DripMate](https://github.com/Zentise/D
 
 ## 🙏 Acknowledgments
 
-- [Ollama](https://ollama.ai/) - Local LLM inference
-- [Meta Llama 3](https://ai.meta.com/llama/) - AI model
+- [Groq](https://groq.com/) - Lightning-fast LLM inference
+- [Meta LLaMA 3.3](https://ai.meta.com/llama/) - AI model
+- [Google Gemini](https://ai.google.dev/) - Vision AI
 - [FastAPI](https://fastapi.tiangolo.com/) - Backend framework
 - [React](https://reactjs.org/) - Frontend framework
-- [Ultralytics YOLOv5](https://github.com/ultralytics/yolov5) - Object detection
+- [Vite](https://vitejs.dev/) - Frontend build tool
 - [TailwindCSS](https://tailwindcss.com/) - UI styling
 
 ---

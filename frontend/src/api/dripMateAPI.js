@@ -1,8 +1,7 @@
 import axios from "axios";
 
-// Build baseURL dynamically based on the current hostname so it works on localhost and LAN
-const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const apiBase = `http://${host}:8000`;
+// Use environment variable for API base URL (production) or fallback to localhost (dev)
+const apiBase = import.meta.env.VITE_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:8000`;
 
 const apiClient = axios.create({
   baseURL: apiBase,
