@@ -38,7 +38,7 @@ git push origin main
    - **Branch:** `main`
    - **Root Directory:** Leave blank
    - **Runtime:** Python 3
-   - **Build Command:** `pip install -r backend/requirements.txt`
+   - **Build Command:** `pip install --upgrade pip && pip install -r backend/requirements.txt`
    - **Start Command:** `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
 
    **Plan:**

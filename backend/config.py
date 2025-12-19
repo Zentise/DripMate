@@ -36,10 +36,16 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 # Model selection
 DEFAULT_LLM = os.getenv("DEFAULT_LLM", "groq")  # "groq", "gemini" or "ollama"
 
-# JWT Authentication (MUST be changed in production)
+# JWT Authentication
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable must be set for security")
+    # Only allow default in development (when .env exists)
+    env_path = Path(__file__).parent / '.env'
+    if env_path.exists():
+        print("⚠ Using default SECRET_KEY - DO NOT USE IN PRODUCTION")
+        SECRET_KEY = "dev-secret-key-change-in-production-12345678901234567890"
+    else:
+        raise ValueError("SECRET_KEY environment variable must be set in production")
     
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days

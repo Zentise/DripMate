@@ -5,9 +5,12 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
+    runtime: python
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
       - key: SECRET_KEY
         generateValue: true
       - key: GEMINI_API_KEY
