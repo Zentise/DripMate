@@ -259,12 +259,25 @@ def delete_wardrobe_item(
 
 # === FAVORITES ===
 
-@app.get("/favorites", response_model=List[FavoriteOut])
+@app.get("/favorites")
 def get_favorites(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get all favorites."""
-    return db.query(FavoriteOutfit).filter(
+    favorites = db.query(FavoriteOutfit).filter(
         FavoriteOutfit.user_id == current_user.id
     ).order_by(FavoriteOutfit.created_at.desc()).all()
+    
+    # Parse payload JSON string back to dict for each favorite
+    result = []
+    for fav in favorites:
+        result.append({
+            "id": fav.id,
+            "title": fav.title,
+            "source_item": fav.source_item,
+            "vibe": fav.vibe,
+            "payload": json.loads(fav.payload),
+            "created_at": fav.created_at
+        })
+    return result
 
 
 @app.post("/favorites", response_model=FavoriteOut, status_code=201)
