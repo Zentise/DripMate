@@ -63,8 +63,8 @@ class ChatRequest(BaseModel):
     use_wardrobe_only: bool = False
     
     # Model selection
-    ai_provider: str = "gemini"  # "gemini" or "ollama"
-    model: str = "gemini-2.5-flash"
+    ai_provider: str = "groq"  # "groq", "gemini" or "ollama"
+    model: str = "llama-3.3-70b"
 
 
 class OutfitItem(BaseModel):

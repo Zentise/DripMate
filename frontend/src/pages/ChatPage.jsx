@@ -74,6 +74,7 @@ function ChatPage() {
     item: "", vibe: "", gender: "Male",
     age_group: "", skin_colour: "", num_ideas: 1, more_details: "",
     layering_preference: "AI Decides", use_wardrobe_only: false,
+    ai_provider: "groq", model: "llama-3.3-70b"
   });
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

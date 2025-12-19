@@ -49,7 +49,7 @@ def root():
     """API info."""
     return {
         "message": "Welcome to DripMate API!",
-        "ai_engine": "Google Gemini",
+        "ai_engine": "Groq (LLaMA 3.3 70B) + Gemini Vision",
         "version": "2.0.0",
         "features": ["Auth", "Wardrobe", "Favorites", "AI Outfit Suggestions"]
     }
@@ -192,8 +192,14 @@ def models():
     """Get available AI models."""
     available = get_available_models()
     return {
-        "default_provider": "gemini",
+        "default_provider": "groq",
         "providers": {
+            "groq": {
+                "name": "Groq (LLaMA 3.3 70B)",
+                "available": available["groq"]["available"],
+                "models": available["groq"]["models"],
+                "default": available["groq"]["default"]
+            },
             "gemini": {
                 "name": "Google Gemini",
                 "available": available["gemini"]["available"],

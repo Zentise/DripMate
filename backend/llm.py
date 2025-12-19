@@ -1,13 +1,39 @@
 """
 LLM abstraction layer for DripMate.
-Supports Gemini (primary) and Ollama (fallback).
+Supports Groq (primary), Gemini, and Ollama (fallback).
 """
 import json
 import re
 import requests
 from typing import Optional, List, Dict
 
-from config import GEMINI_API_KEY, OLLAMA_URL
+from config import GEMINI_API_KEY, GROQ_API_KEY, OLLAMA_URL
+
+
+# --- Groq Setup ---
+try:
+    from groq import Groq
+    
+    if GROQ_API_KEY:
+        groq_client = Groq(api_key=GROQ_API_KEY)
+        GROQ_AVAILABLE = True
+    else:
+        groq_client = None
+        GROQ_AVAILABLE = False
+        print("⚠ GROQ_API_KEY not set")
+except Exception as e:
+    print(f"⚠ Groq not available: {e}")
+    GROQ_AVAILABLE = False
+    groq_client = None
+
+
+# Available Groq models
+GROQ_MODELS = {
+    "llama-3.3-70b": "llama-3.3-70b-versatile",
+    "llama-3.1-70b": "llama-3.1-70b-versatile",
+    "mixtral-8x7b": "mixtral-8x7b-32768",
+}
+DEFAULT_GROQ_MODEL = "llama-3.3-70b"
 
 
 # --- Gemini Setup ---
@@ -47,11 +73,11 @@ def get_style_suggestion(
     more_details: Optional[str] = None,
     layering_preference: str = "AI Decides",
     wardrobe: Optional[Dict[str, List[str]]] = None,
-    provider: str = "gemini",
+    provider: str = "groq",
     model_name: str = None,
 ) -> dict:
     """
-    Get outfit suggestions using AI (Gemini or Ollama).
+    Get outfit suggestions using AI (Groq, Gemini or Ollama).
     
     Args:
         item: Base clothing item
@@ -63,13 +89,18 @@ def get_style_suggestion(
         more_details: Additional constraints
         layering_preference: "Suggest Layers", "No Layers", or "AI Decides"
         wardrobe: Optional user wardrobe items
-        provider: "gemini" or "ollama"
+        provider: "groq", "gemini" or "ollama"
         model_name: Specific model name
     
     Returns:
         Dict with 'outfits' list or 'error' message
     """
-    if provider == "gemini":
+    if provider == "groq":
+        return _groq_suggestion(
+            item, vibe, gender, age_group, skin_colour,
+            num_ideas, more_details, layering_preference, wardrobe, model_name
+        )
+    elif provider == "gemini":
         return _gemini_suggestion(
             item, vibe, gender, age_group, skin_colour,
             num_ideas, more_details, layering_preference, wardrobe, model_name
@@ -81,6 +112,63 @@ def get_style_suggestion(
         )
     else:
         return {"error": f"Unknown provider: {provider}", "outfits": []}
+
+
+def _groq_suggestion(
+    item: str, vibe: str, gender: str,
+    age_group: Optional[str], skin_colour: Optional[str],
+    num_ideas: int, more_details: Optional[str],
+    layering_preference: str, wardrobe: Optional[Dict],
+    model_name: Optional[str]
+) -> dict:
+    """Get outfit suggestions from Groq (LLaMA 3.3 70B)."""
+    if not GROQ_AVAILABLE:
+        return {
+            "error": "Groq not configured. Set GROQ_API_KEY.",
+            "outfits": []
+        }
+    
+    # Select model
+    if not model_name or model_name not in GROQ_MODELS:
+        model_name = DEFAULT_GROQ_MODEL
+    
+    # Build prompt
+    prompt = _build_prompt(
+        item, vibe, gender, age_group, skin_colour,
+        num_ideas, more_details, layering_preference, wardrobe
+    )
+    
+    try:
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODELS[model_name],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are DripMate, a world-class AI fashion stylist. Always respond with valid JSON only."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.9,
+            max_tokens=2048,
+            response_format={"type": "json_object"}
+        )
+        
+        raw = response.choices[0].message.content.strip()
+        
+        # Parse JSON
+        try:
+            data = json.loads(raw)
+        except:
+            cleaned = _clean_json(raw)
+            data = json.loads(cleaned)
+        
+        return _normalize_outfits(data)
+        
+    except Exception as e:
+        return {"error": f"Groq error: {e}", "outfits": []}
 
 
 def _gemini_suggestion(
@@ -333,6 +421,11 @@ def _normalize_outfits(data: dict) -> dict:
 def get_available_models() -> dict:
     """Get available models for each provider."""
     return {
+        "groq": {
+            "available": GROQ_AVAILABLE,
+            "models": list(GROQ_MODELS.keys()),
+            "default": DEFAULT_GROQ_MODEL
+        },
         "gemini": {
             "available": GEMINI_AVAILABLE,
             "models": list(GEMINI_MODELS.keys()),
