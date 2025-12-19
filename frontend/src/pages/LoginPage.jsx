@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { login, getProfile } from "../api/dripMateAPI";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,20 +18,17 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem("token", data.access_token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        navigate("/chat");
+      const data = await login(formData);
+      
+      if (data.error) {
+        setError(data.error);
       } else {
-        setError(data.detail || "Login failed");
+        // Fetch user profile
+        const profile = await getProfile();
+        if (profile && !profile.error) {
+          localStorage.setItem("user", JSON.stringify(profile));
+        }
+        navigate("/chat");
       }
     } catch (err) {
       setError("Network error. Please try again.");

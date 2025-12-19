@@ -14,6 +14,13 @@ const BotResponse = ({ content, onSave }) => {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {content.detectedText && (
+        <div className="card" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-primary)' }}>
+          <p className="text-base md:text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {content.detectedText}
+          </p>
+        </div>
+      )}
       {content.outfits.map((outfit, idx) => (
         <div key={outfit.id} className="card hover-lift" style={{ animationDelay: `${idx * 0.1}s` }}>
           <p className="font-bold text-lg md:text-xl mb-4">✨ Outfit Idea {outfit.id}</p>
@@ -177,7 +184,14 @@ function ChatPage() {
       if (botResponse.error) {
         transformedResponse = { error: botResponse.error };
       } else {
+        // Show what was detected
+        const detectedItem = botResponse.detected_item;
+        const detectedText = detectedItem?.name 
+          ? `📸 Detected: ${detectedItem.name}${detectedItem.description ? ' - ' + detectedItem.description : ''}`
+          : '';
+        
         transformedResponse = {
+          detectedText,
           outfits: botResponse.outfits?.map((outfit, idx) => ({
             id: idx + 1,
             item1: { 
@@ -200,6 +214,8 @@ function ChatPage() {
       setMessages(prev => [...prev, botMessage]);
       setIsLoading(false);
       setSimpleInput("");
+      setSelectedImage(null);
+      setImagePreview(null);
       setIsInputMinimized(true);
       return;
     }
@@ -232,7 +248,8 @@ function ChatPage() {
     }
 
     // Advanced mode - use form data
-    if (showAdvanced && (!formData.item || !formData.vibe)) return;
+    // Allow submission if image is selected OR if both item and vibe are provided
+    if (showAdvanced && !selectedImage && (!formData.item || !formData.vibe)) return;
     if (showAdvanced) {
       const userMessage = { sender: "user", text: `Getting suggestions for: ${formData.item}` };
       setMessages(prev => [...prev, userMessage]);
@@ -265,95 +282,118 @@ function ChatPage() {
     <div className="min-h-screen w-full flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       {/* Header - Only show when no messages */}
       {messages.length === 0 && (
-        <header className="py-12 md:py-20 text-center fade-in">
-          <h1 className="font-bold tracking-tight mb-3 text-5xl md:text-7xl">
+        <header className="py-16 md:py-24 text-center fade-in">
+          <h1 className="font-bold tracking-tight mb-4 text-6xl md:text-8xl" style={{ fontWeight: '600' }}>
             DripMate
           </h1>
-          <p className="text-lg md:text-xl mb-8" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-xl md:text-2xl mb-12" style={{ color: 'var(--text-secondary)', fontWeight: '300' }}>
             Your AI Personal Stylist
           </p>
-          <div className="max-w-2xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div className="p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
-              <span className="block mb-2">💬</span>
-              <p style={{ color: 'var(--text-secondary)' }}>Ask for outfit suggestions</p>
+          <div className="max-w-3xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-card)' }}>
+              <span className="block mb-3 text-2xl">💬</span>
+              <p className="text-base" style={{ color: 'var(--text-secondary)' }}>Ask for outfit suggestions</p>
             </div>
-            <div className="p-4 rounded-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
-              <span className="block mb-2">📸</span>
-              <p style={{ color: 'var(--text-secondary)' }}>Upload clothing photos</p>
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-card)' }}>
+              <span className="block mb-3 text-2xl">📸</span>
+              <p className="text-base" style={{ color: 'var(--text-secondary)' }}>Upload clothing photos</p>
             </div>
           </div>
         </header>
       )}
 
-      {/* Chat Messages */}
-      <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-32 max-w-4xl w-full mx-auto">
-        <div className="space-y-6 md:space-y-8 py-4">
-          {messages.map((msg, index) => (
-            <div 
-              key={index} 
-              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} fade-in`}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
+      {/* Chat Messages - ChatGPT/Gemini Style */}
+      <main className="flex-1 overflow-y-auto pb-32">
+        <div className="max-w-3xl mx-auto px-4 md:px-6">
+          <div className="space-y-8 py-6">
+            {messages.map((msg, index) => (
               <div 
-                className={`chat-bubble p-4 md:p-5 rounded-2xl transition-all duration-300 ${
-                  msg.sender === 'user' 
-                    ? 'max-w-[85%] md:max-w-[70%]' 
-                    : 'max-w-[95%] md:max-w-[90%]'
-                }`}
-                style={{
-                  background: msg.sender === 'user' ? 'var(--bg-elevated)' : 'var(--bg-card)',
-                  border: `1px solid ${msg.sender === 'user' ? 'var(--border-primary)' : 'var(--border-secondary)'}`
-                }}
+                key={index} 
+                className="fade-in"
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {msg.sender === 'user' ? (
-                  <div>
-                    {msg.image && (
-                      <img 
-                        src={msg.image} 
-                        alt="uploaded" 
-                        className="mb-3 rounded-xl max-w-[200px] border"
-                        style={{ borderColor: 'var(--border-primary)' }}
-                      />
-                    )}
-                    <p className="text-base md:text-lg">{msg.text}</p>
+                  /* User Message - Right aligned */
+                  <div className="flex justify-end">
+                    <div 
+                      className="max-w-[80%] md:max-w-[70%] p-4 md:p-5 rounded-3xl"
+                      style={{
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-primary)'
+                      }}
+                    >
+                      {msg.image && (
+                        <img 
+                          src={msg.image} 
+                          alt="uploaded" 
+                          className="mb-3 rounded-xl max-w-[200px] border"
+                          style={{ borderColor: 'var(--border-primary)' }}
+                        />
+                      )}
+                      <p className="text-base md:text-lg">{msg.text}</p>
+                    </div>
                   </div>
                 ) : (
-                  <BotResponse content={msg.content} onSave={handleSaveFavorite} />
+                  /* Bot Message - Left aligned, full width */
+                  <div className="flex justify-start">
+                    <div className="w-full">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg" 
+                             style={{ background: 'var(--bg-elevated)' }}>
+                          ✨
+                        </div>
+                        <span className="font-semibold text-sm" style={{ color: 'var(--text-secondary)', paddingTop: '6px' }}>
+                          DripMate
+                        </span>
+                      </div>
+                      <div className="pl-11">
+                        <BotResponse content={msg.content} onSave={handleSaveFavorite} />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex justify-start fade-in">
-              <div 
-                className="p-4 md:p-5 rounded-2xl loading-shimmer max-w-[200px]"
-                style={{ border: '1px solid var(--border-secondary)' }}
-              >
-                <p className="text-base pulse">Thinking...</p>
+            ))}
+            
+            {isLoading && (
+              <div className="fade-in">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg" 
+                       style={{ background: 'var(--bg-elevated)' }}>
+                    ✨
+                  </div>
+                  <span className="font-semibold text-sm" style={{ color: 'var(--text-secondary)', paddingTop: '6px' }}>
+                    DripMate
+                  </span>
+                </div>
+                <div className="pl-11">
+                  <div className="inline-block px-5 py-3 rounded-2xl loading-shimmer">
+                    <p className="text-base pulse" style={{ color: 'var(--text-secondary)' }}>Thinking...</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
 
-      {/* Fixed Input Footer - ChatGPT Style */}
+      {/* Fixed Input Footer - ChatGPT/Gemini Style */}
       <footer 
-        className="fixed bottom-0 left-0 right-0 pb-20 md:pb-24 backdrop-blur-xl"
+        className="fixed bottom-0 left-0 right-0 pb-20 md:pb-24"
         style={{ 
-          background: 'rgba(0, 0, 0, 0.8)',
-          borderTop: '1px solid var(--border-primary)'
+          background: 'linear-gradient(to top, var(--bg-primary) 0%, var(--bg-primary) 90%, transparent 100%)',
         }}
       >
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 md:px-6 py-4">
           {isInputMinimized ? (
             /* Minimized Input - Show button to expand */
             <button
               onClick={() => setIsInputMinimized(false)}
-              className="w-full py-3 px-6 rounded-2xl font-semibold text-base transition-all hover:scale-[1.02]"
+              className="w-full py-4 px-6 rounded-3xl font-medium text-base transition-all hover:scale-[1.01]"
               style={{ 
                 background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-primary)'
+                border: '1px solid var(--border-primary)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.3)'
               }}
             >
               ✨ Ask for a new outfit suggestion
@@ -366,15 +406,15 @@ function ChatPage() {
               <button
                 type="button"
                 onClick={() => handleModeChange("yourself")}
-                className={`flex-1 py-2 px-4 rounded-xl font-semibold text-sm transition-all ${
-                  chatMode === "yourself" ? 'scale-105' : ''
+                className={`flex-1 py-2.5 px-4 rounded-2xl font-medium text-sm transition-all ${
+                  chatMode === "yourself" ? '' : ''
                 }`}
                 style={{
                   background: chatMode === "yourself" 
                     ? 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)'
                     : 'var(--bg-tertiary)',
                   color: chatMode === "yourself" ? '#000000' : 'var(--text-secondary)',
-                  border: `1px solid ${chatMode === "yourself" ? '#ffffff' : 'var(--border-secondary)'}`
+                  border: `1px solid ${chatMode === "yourself" ? '#ffffff' : 'transparent'}`
                 }}
               >
                 👤 For Yourself
@@ -382,15 +422,15 @@ function ChatPage() {
               <button
                 type="button"
                 onClick={() => handleModeChange("others")}
-                className={`flex-1 py-2 px-4 rounded-xl font-semibold text-sm transition-all ${
-                  chatMode === "others" ? 'scale-105' : ''
+                className={`flex-1 py-2.5 px-4 rounded-2xl font-medium text-sm transition-all ${
+                  chatMode === "others" ? '' : ''
                 }`}
                 style={{
                   background: chatMode === "others" 
                     ? 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)'
                     : 'var(--bg-tertiary)',
                   color: chatMode === "others" ? '#000000' : 'var(--text-secondary)',
-                  border: `1px solid ${chatMode === "others" ? '#ffffff' : 'var(--border-secondary)'}`
+                  border: `1px solid ${chatMode === "others" ? '#ffffff' : 'transparent'}`
                 }}
               >
                 👥 For Others
@@ -398,7 +438,7 @@ function ChatPage() {
             </div>
             
             {chatMode === "yourself" && userProfile && (
-              <div className="px-3 py-2 rounded-lg text-xs fade-in" 
+              <div className="px-4 py-2.5 rounded-2xl text-xs fade-in" 
                    style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
                 ℹ️ Using your profile: {userProfile.gender}, {userProfile.age_group}, {userProfile.skin_colour}
               </div>
@@ -410,34 +450,35 @@ function ChatPage() {
                 <img 
                   src={imagePreview} 
                   alt="preview" 
-                  className="h-16 rounded-lg border"
+                  className="h-20 rounded-2xl border"
                   style={{ borderColor: 'var(--border-primary)' }}
                 />
                 <button 
                   type="button"
                   onClick={handleClearImage}
-                  className="px-3 py-1 text-sm rounded-lg transition-all"
+                  className="px-4 py-2 text-sm rounded-2xl transition-all hover:scale-105"
                   style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
                 >
-                  Remove
+                  ✕ Remove
                 </button>
               </div>
             )}
 
             {/* Main Input Container */}
             <div 
-              className="rounded-2xl overflow-hidden"
+              className="rounded-3xl overflow-hidden"
               style={{ 
                 background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-primary)'
+                border: '1px solid var(--border-primary)',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.4)'
               }}
             >
               {/* Simple Text Input */}
-              <div className="flex items-end gap-2 p-3">
+              <div className="flex items-end gap-3 p-4">
                 <button
                   type="button"
                   onClick={() => document.getElementById('imageInput').click()}
-                  className="p-2 rounded-lg transition-all hover:scale-110"
+                  className="p-2.5 rounded-xl transition-all hover:scale-110"
                   style={{ background: 'var(--bg-tertiary)' }}
                   title="Upload image"
                 >
@@ -461,11 +502,11 @@ function ChatPage() {
                       handleSend(e);
                     }
                   }}
-                  placeholder={selectedImage ? "Add details (optional)..." : "Ask for outfit suggestions... (e.g., 'black hoodie streetwear')"}
+                  placeholder={selectedImage ? "Add details (optional)..." : "Ask for outfit suggestions..."}
                   rows={1}
                   className="flex-1 bg-transparent border-0 resize-none outline-none text-base md:text-lg py-2"
                   style={{ 
-                    maxHeight: '120px',
+                    maxHeight: '150px',
                     color: 'var(--text-primary)'
                   }}
                 />
@@ -473,9 +514,9 @@ function ChatPage() {
                 <button
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="p-2 rounded-lg transition-all"
+                  className="p-2.5 rounded-xl transition-all hover:scale-110"
                   style={{ 
-                    background: showAdvanced ? 'var(--bg-card)' : 'var(--bg-tertiary)',
+                    background: showAdvanced ? 'var(--bg-card)' : 'transparent',
                     color: 'var(--text-secondary)'
                   }}
                   title="Advanced options"
@@ -487,11 +528,11 @@ function ChatPage() {
                 
                 <button
                   type="submit"
-                  disabled={isLoading || (!simpleInput.trim() && !selectedImage && (!showAdvanced || !formData.item || !formData.vibe))}
-                  className="p-2 rounded-lg transition-all font-bold text-black disabled:opacity-40"
+                  disabled={isLoading || (!simpleInput.trim() && !selectedImage && (!showAdvanced || (!selectedImage && !formData.item) || !formData.vibe))}
+                  className="p-2.5 rounded-xl transition-all font-bold text-black disabled:opacity-40 hover:scale-110"
                   style={{ background: 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)' }}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                 </button>
@@ -500,7 +541,7 @@ function ChatPage() {
               {/* Advanced Options - Collapsible */}
               {showAdvanced && (
                 <div 
-                  className="px-3 pb-3 pt-2 border-t slide-up space-y-3"
+                  className="px-4 pb-4 pt-3 border-t slide-up space-y-3"
                   style={{ borderColor: 'var(--border-secondary)' }}
                 >
                   {/* Item and Vibe inputs for advanced mode */}
@@ -510,9 +551,9 @@ function ChatPage() {
                       name="item" 
                       value={formData.item} 
                       onChange={handleInputChange}
-                      placeholder="* Clothing item (e.g., black hoodie)"
+                      placeholder={selectedImage ? "Clothing item (optional - detected from image)" : "* Clothing item (e.g., black hoodie)"}
                       className="text-sm p-2"
-                      required
+                      required={!selectedImage}
                     />
                     <input 
                       type="text"
@@ -606,8 +647,8 @@ function ChatPage() {
               )}
             </div>
             
-            <p className="text-xs text-center" style={{ color: 'var(--text-tertiary)' }}>
-              Press Enter to send, Shift+Enter for new line
+            <p className="text-xs text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              Press Enter to send • Shift+Enter for new line
             </p>
           </form>
           )}
