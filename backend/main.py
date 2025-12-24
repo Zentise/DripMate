@@ -101,6 +101,9 @@ def get_profile(current_user: User = Depends(get_current_user)):
     """Get user profile."""
     return current_user
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
 # === CHAT ===
 
