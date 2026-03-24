@@ -1,662 +1,548 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  MessageSquare, Image as ImageIcon, Settings, Send, Paperclip,
+  User, Sparkles, Menu, X, LogOut, Home, Heart, Shirt,
+  ChevronRight, ArrowUpRight, Loader2, Maximize2
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { getOutfitSuggestion, saveFavorite, getOutfitFromImage, getProfile } from "../api/dripMateAPI.js";
 
-const BotResponse = ({ content, onSave }) => {
+// Utility for merging tailwind classes
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+// --- Components ---
+
+const NavItem = ({ icon: Icon, label, path, isActive, onClick, isMobile = false }) => (
+  <button
+    onClick={() => onClick(path)}
+    className={cn(
+      "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
+      isActive
+        ? "bg-zinc-800 text-white shadow-lg shadow-zinc-900/20"
+        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200",
+      isMobile ? "flex-col gap-1 p-2 text-xs" : ""
+    )}
+  >
+    <Icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isMobile ? "w-6 h-6" : "")} />
+    {!isMobile && <span className="font-medium">{label}</span>}
+    {isMobile && <span className="font-medium scale-90">{label}</span>}
+  </button>
+);
+
+const UserAvatar = ({ className }) => (
+  <div className={cn("w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs shadow-md", className)}>
+    YOU
+  </div>
+);
+
+const BotAvatar = ({ className }) => (
+  <div className={cn("w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shadow-md", className)}>
+    <Sparkles className="w-4 h-4 text-indigo-400" />
+  </div>
+);
+
+const MessageBubble = ({ message, onSave }) => {
+  const isUser = message.sender === "user";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className={cn(
+        "flex w-full mb-6",
+        isUser ? "justify-end" : "justify-start"
+      )}
+    >
+      <div className={cn("flex max-w-[85%] md:max-w-[70%] gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
+        {/* Avatar */}
+        <div className="flex-shrink-0 mt-1">
+          {isUser ? <UserAvatar /> : <BotAvatar />}
+        </div>
+
+        {/* Bubble */}
+        <div className="flex flex-col gap-2">
+          <div
+            className={cn(
+              "p-4 rounded-2xl shadow-sm text-sm md:text-base leading-relaxed break-words",
+              isUser
+                ? "bg-indigo-600 text-white rounded-tr-sm"
+                : "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-tl-sm"
+            )}
+          >
+            {message.image && (
+              <img
+                src={message.image}
+                alt="Uploaded"
+                className="mb-3 rounded-xl max-w-full h-auto object-cover border border-white/20"
+              />
+            )}
+
+            {message.content ? (
+              <ChatContent content={message.content} onSave={onSave} />
+            ) : (
+              <p>{message.text}</p>
+            )}
+          </div>
+
+          {/* Timestamp (Mock) */}
+          <span className={cn("text-xs text-zinc-400", isUser ? "text-right" : "text-left")}>
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const ChatContent = ({ content, onSave }) => {
   if (content.error) {
     return (
-      <div className="card" style={{ background: 'var(--bg-tertiary)', borderColor: '#ff4444' }}>
-        <p className="font-bold mb-2">⚠️ An Error Occurred</p>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{content.error}</p>
+      <div className="text-red-300 flex items-center gap-2">
+        <span className="text-lg">⚠️</span> {content.error}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4">
       {content.detectedText && (
-        <div className="card" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-primary)' }}>
-          <p className="text-base md:text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-            {content.detectedText}
-          </p>
+        <div className="text-xs font-mono bg-zinc-900/50 p-2 rounded border border-zinc-700/50 text-indigo-300">
+          {content.detectedText}
         </div>
       )}
-      {content.outfits.map((outfit, idx) => (
-        <div key={outfit.id} className="card hover-lift" style={{ animationDelay: `${idx * 0.1}s` }}>
-          <p className="font-bold text-lg md:text-xl mb-4">✨ Outfit Idea {outfit.id}</p>
-          <div className="space-y-3 mb-4">
-            <div className="pb-3" style={{ borderBottom: '1px solid var(--border-secondary)' }}>
-              <p className="font-semibold text-base md:text-lg mb-1">{outfit.item1.name}</p>
-              {outfit.item1.reason && (
-                <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
-                  {outfit.item1.reason}
-                </p>
-              )}
-            </div>
-            <div className="pb-3" style={{ borderBottom: '1px solid var(--border-secondary)' }}>
-              <p className="font-semibold text-base md:text-lg mb-1">{outfit.item2.name}</p>
-              {outfit.item2.reason && (
-                <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
-                  {outfit.item2.reason}
-                </p>
-              )}
-            </div>
-            <div className="pt-1">
-              <p className="font-semibold text-base md:text-lg mb-1">{outfit.footwear.name}</p>
-              {outfit.footwear.reason && (
-                <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
-                  {outfit.footwear.reason}
-                </p>
-              )}
-            </div>
+
+      {content.outfits.map((outfit, i) => (
+        <div key={outfit.id} className="bg-zinc-900/30 rounded-xl p-3 border border-zinc-700/50">
+          <div className="flex items-center justify-between mb-3 border-b border-zinc-700/50 pb-2">
+            <h4 className="font-bold text-indigo-400 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs">#{outfit.id}</span>
+              Outfit Idea
+            </h4>
+            <button
+              onClick={() => onSave(outfit)}
+              className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+            >
+              <Heart className="w-3 h-3" /> Save
+            </button>
           </div>
-          <button
-            onClick={() => onSave(outfit)}
-            className="w-full mt-4 py-3 font-bold text-black"
-            style={{ 
-              background: 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)',
-              border: '1px solid var(--border-primary)'
-            }}
-          >
-            💾 Save to Favorites
-          </button>
+
+          <div className="space-y-3 text-sm">
+            {[outfit.item1, outfit.item2, outfit.footwear].map((item, idx) => (
+              <div key={idx} className="relative pl-3 border-l-2 border-indigo-500/30">
+                <p className="font-medium text-zinc-200">{item.name}</p>
+                {item.reason && <p className="text-xs text-zinc-500 mt-0.5">{item.reason}</p>}
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
   );
 };
 
-function ChatPage() {
+// --- Page Component ---
+
+export default function ChatPage() {
   const navigate = useNavigate();
-  const [chatMode, setChatMode] = useState("yourself"); // "yourself" or "others"
+  const location = useLocation();
+  const [inputFocused, setInputFocused] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [input, setInput] = useState("");
+
+  // Advanced State
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  // Data State
   const [userProfile, setUserProfile] = useState(null);
   const [formData, setFormData] = useState({
     item: "", vibe: "", gender: "Male",
     age_group: "", skin_colour: "", num_ideas: 1, more_details: "",
-    layering_preference: "AI Decides", use_wardrobe_only: false,
-    ai_provider: "groq", model: "llama-3.3-70b"
+    layering_preference: "AI Decides", use_wardrobe_only: false
   });
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [simpleInput, setSimpleInput] = useState("");
-  const [isInputMinimized, setIsInputMinimized] = useState(false);
 
-  // Load user profile on mount
+  const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const activeTab = location.pathname;
+
+  // Scroll to bottom
   useEffect(() => {
-    // Check if user is logged in
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  // Load Profile
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
       return;
     }
+    getProfile().then(setUserProfile).catch(() => { });
+  }, [navigate]);
 
-    const loadProfile = async () => {
-      try {
-        const profile = await getProfile();
-        setUserProfile(profile);
-        // Auto-fill from profile if in "yourself" mode
-        if (chatMode === "yourself") {
-          setFormData(prev => ({
-            ...prev,
-            gender: profile.gender || prev.gender,
-            age_group: profile.age_group || prev.age_group,
-            skin_colour: profile.skin_colour || prev.skin_colour,
-          }));
-        }
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-        if (err.response?.status === 401) {
-          // Token expired or invalid
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          navigate('/login');
-        }
-      }
-    };
-    loadProfile();
-  }, [chatMode, navigate]);
-
-  // Update form when mode changes
-  const handleModeChange = (mode) => {
-    setChatMode(mode);
-    if (mode === "yourself" && userProfile) {
-      setFormData(prev => ({
-        ...prev,
-        gender: userProfile.gender || "",
-        age_group: userProfile.age_group || "",
-        skin_colour: userProfile.skin_colour || "",
-      }));
-    } else if (mode === "others") {
-      setFormData(prev => ({
-        ...prev,
-        gender: "Male",
-        age_group: "",
-        skin_colour: "",
-      }));
+  // Handlers
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-  };
-
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => setImagePreview(ev.target.result);
-      reader.readAsDataURL(file);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
     }
   };
 
-  const handleClearImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+  const handleFile = (file) => {
+    if (!file) return;
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+    setShowAdvanced(true); // Auto open advanced for image context
   };
 
   const handleSend = async (e) => {
     e.preventDefault();
-    
-    // Image-based flow
-    if (selectedImage) {
-      if (isLoading) return;
-      
-      const userMessage = { 
-        sender: "user", 
-        text: simpleInput || "Analyzing clothing item from image...",
-        image: imagePreview 
-      };
-      setMessages(prev => [...prev, userMessage]);
-      setIsLoading(true);
+    if ((!input.trim() && !selectedImage && !formData.item) || isLoading) return;
 
-      const botResponse = await getOutfitFromImage(
-        selectedImage, 
-        simpleInput || formData.more_details, 
-        formData.use_wardrobe_only
-      );
-      
-      // Transform Gemini response to match existing UI format
-      let transformedResponse;
-      if (botResponse.error) {
-        transformedResponse = { error: botResponse.error };
-      } else {
-        // Show what was detected
-        const detectedItem = botResponse.detected_item;
-        const detectedText = detectedItem?.name 
-          ? `📸 Detected: ${detectedItem.name}${detectedItem.description ? ' - ' + detectedItem.description : ''}`
-          : '';
-        
-        transformedResponse = {
+    setIsLoading(true);
+
+    // Prepare Request Logic (reusing existing logic structure)
+    try {
+      if (selectedImage) {
+        // Image Flow
+        setMessages(prev => [...prev, {
+          sender: "user",
+          text: input || "Analyzing this look...",
+          image: imagePreview
+        }]);
+
+        const response = await getOutfitFromImage(selectedImage, input || formData.more_details, formData.use_wardrobe_only);
+
+        // Adapt response
+        const detectedText = response.detected_item?.name
+          ? `📸 Detected: ${response.detected_item.name}`
+          : "";
+
+        const adaptedResponse = {
           detectedText,
-          outfits: botResponse.outfits?.map((outfit, idx) => ({
-            id: idx + 1,
-            item1: { 
-              name: outfit.item1?.name || "Top", 
-              reason: "" 
-            },
-            item2: { 
-              name: outfit.item2?.name || "Bottom", 
-              reason: "" 
-            },
-            footwear: { 
-              name: outfit.footwear?.name || "Shoes", 
-              reason: outfit.reason || "" 
-            },
+          outfits: response.outfits?.map((o, i) => ({
+            id: i + 1,
+            item1: { name: o.item1?.name || "Top", reason: "" },
+            item2: { name: o.item2?.name || "Bottom", reason: "" },
+            footwear: { name: o.footwear?.name || "Shoes", reason: o.reason || "" }
           })) || []
         };
+
+        setMessages(prev => [...prev, { sender: "bot", content: adaptedResponse }]);
+
+      } else {
+        // Text Flow
+        setMessages(prev => [...prev, { sender: "user", text: input || `Suggestion for: ${formData.item}` }]);
+
+        // Simple/Advanced Parse
+        let requestData = { ...formData };
+        if (!showAdvanced) {
+          if (input) {
+            const words = input.toLowerCase().split(' ');
+            const vibe = ['casual', 'formal', 'streetwear', 'sporty'].find(v => words.includes(v)) || 'casual';
+            requestData = { ...formData, item: input, vibe, more_details: input };
+          }
+        } else {
+          if (!requestData.item && input) requestData.item = input;
+        }
+
+        const response = await getOutfitSuggestion(requestData);
+        setMessages(prev => [...prev, { sender: "bot", content: response }]);
       }
-
-      const botMessage = { sender: "bot", content: transformedResponse };
-      setMessages(prev => [...prev, botMessage]);
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [...prev, { sender: "bot", content: { error: "Failed to get suggestions. Try again?" } }]);
+    } finally {
       setIsLoading(false);
-      setSimpleInput("");
-      setSelectedImage(null);
+      setInput("");
       setImagePreview(null);
-      setIsInputMinimized(true);
-      return;
-    }
-
-    // Simple mode - parse the input
-    if (!showAdvanced && simpleInput.trim()) {
-      const userMessage = { sender: "user", text: simpleInput };
-      setMessages(prev => [...prev, userMessage]);
-      setIsLoading(true);
-      
-      // Parse simple input to extract item and vibe
-      const words = simpleInput.toLowerCase().split(' ');
-      const vibeKeywords = ['casual', 'formal', 'streetwear', 'sporty', 'elegant', 'vintage', 'minimalist', 'edgy'];
-      const detectedVibe = words.find(w => vibeKeywords.includes(w)) || 'casual';
-      
-      const requestData = {
-        ...formData,
-        item: simpleInput,
-        vibe: detectedVibe,
-        more_details: simpleInput
-      };
-
-      const botResponse = await getOutfitSuggestion(requestData);
-      const botMessage = { sender: "bot", content: botResponse };
-      setMessages(prev => [...prev, botMessage]);
-      setIsLoading(false);
-      setSimpleInput("");
-      setIsInputMinimized(true);
-      return;
-    }
-
-    // Advanced mode - use form data
-    // Allow submission if image is selected OR if both item and vibe are provided
-    if (showAdvanced && !selectedImage && (!formData.item || !formData.vibe)) return;
-    if (showAdvanced) {
-      const userMessage = { sender: "user", text: `Getting suggestions for: ${formData.item}` };
-      setMessages(prev => [...prev, userMessage]);
-      setIsLoading(true);
-
-      const botResponse = await getOutfitSuggestion(formData);
-      const botMessage = { sender: "bot", content: botResponse };
-      setMessages(prev => [...prev, botMessage]);
-      setIsLoading(false);
-      setIsInputMinimized(true);
+      setSelectedImage(null);
     }
   };
 
-  const handleSaveFavorite = async (outfit) => {
-    const payload = {
-      title: `${formData.vibe || 'Outfit'} idea`,
-      source_item: formData.item,
-      vibe: formData.vibe,
-      payload: outfit,
-    };
-    try {
-      await saveFavorite(payload);
-      alert("Saved to favorites");
-    } catch (e) {
-      alert("Failed to save favorite");
-    }
+  const menuItems = [
+    { path: '/', icon: Home, label: 'Home' },
+    { path: '/chat', icon: MessageSquare, label: 'Assistant' },
+    { path: '/wardrobe', icon: Shirt, label: 'Wardrobe' },
+    { path: '/profile', icon: User, label: 'Profile' }
+  ];
+
+  const handleNav = (path) => {
+    navigate(path);
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col" style={{ background: 'var(--bg-primary)' }}>
-      {/* Header - Only show when no messages */}
-      {messages.length === 0 && (
-        <header className="py-16 md:py-24 text-center fade-in">
-          <h1 className="font-bold tracking-tight mb-4 text-6xl md:text-8xl" style={{ fontWeight: '600' }}>
-            DripMate
-          </h1>
-          <p className="text-xl md:text-2xl mb-12" style={{ color: 'var(--text-secondary)', fontWeight: '300' }}>
-            Your AI Personal Stylist
-          </p>
-          <div className="max-w-3xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-card)' }}>
-              <span className="block mb-3 text-2xl">💬</span>
-              <p className="text-base" style={{ color: 'var(--text-secondary)' }}>Ask for outfit suggestions</p>
-            </div>
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-card)' }}>
-              <span className="block mb-3 text-2xl">📸</span>
-              <p className="text-base" style={{ color: 'var(--text-secondary)' }}>Upload clothing photos</p>
-            </div>
-          </div>
-        </header>
-      )}
+    <div className="flex h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-indigo-500/30">
 
-      {/* Chat Messages - ChatGPT/Gemini Style */}
-      <main className="flex-1 overflow-y-auto pb-32">
-        <div className="max-w-3xl mx-auto px-4 md:px-6">
-          <div className="space-y-8 py-6">
-            {messages.map((msg, index) => (
-              <div 
-                key={index} 
-                className="fade-in"
-                style={{ animationDelay: `${index * 0.05}s` }}
+      {/* --- Left Sidebar (Desktop) --- */}
+      <aside className="hidden md:flex w-20 lg:w-64 flex-col border-r border-zinc-900 bg-zinc-950/50 backdrop-blur-xl z-20">
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-600 shadow-lg shadow-indigo-500/20 flex-shrink-0" />
+          <h1 className="font-bold text-xl tracking-tight hidden lg:block">DripMate</h1>
+        </div>
+
+        <nav className="flex-1 px-3 space-y-2">
+          {menuItems.map(item => (
+            <NavItem
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              path={item.path}
+              isActive={activeTab === item.path}
+              onClick={handleNav}
+            />
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-zinc-900">
+          <button onClick={() => { localStorage.removeItem('token'); navigate('/login'); }} className="flex items-center gap-3 text-zinc-500 hover:text-red-400 transition-colors p-2 rounded-lg w-full">
+            <LogOut className="w-5 h-5" />
+            <span className="hidden lg:inline text-sm font-medium">Log out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* --- Main Chat Area --- */}
+      <main
+        className="flex-1 flex flex-col relative"
+        onDragEnter={handleDrag}
+      >
+        {/* Header (Mobile) */}
+        <header className="md:hidden flex items-center justify-between p-4 border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-gradient-to-tr from-indigo-600 to-violet-600" />
+            <span className="font-bold">DripMate</span>
+          </div>
+          <UserAvatar className="w-7 h-7" />
+        </header>
+
+        {/* Drag Overlay */}
+        <AnimatePresence>
+          {dragActive && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 bg-indigo-900/80 backdrop-blur-sm flex flex-col items-center justify-center border-4 border-indigo-500 m-4 rounded-3xl border-dashed"
+              onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+            >
+              <ImageIcon className="w-16 h-16 text-white mb-4 animate-bounce" />
+              <h3 className="text-2xl font-bold text-white">Drop your fit check here</h3>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+              <div className="w-20 h-20 bg-zinc-900 rounded-3xl flex items-center justify-center mb-6 rotate-3">
+                <Sparkles className="w-10 h-10 text-indigo-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-zinc-200 mb-2">How's the fit today?</h2>
+              <p className="max-w-md text-zinc-500">
+                Upload a photo or describe your vibe. DripMate is ready to style you.
+              </p>
+            </div>
+          ) : (
+            messages.map((msg, idx) => (
+              <MessageBubble
+                key={idx}
+                message={msg}
+                onSave={(outfit) => saveFavorite({ payload: outfit, vibe: formData.vibe, source_item: formData.item })}
+              />
+            ))
+          )}
+          {isLoading && (
+            <div className="flex items-center gap-3 text-zinc-500 pl-4">
+              <Sparkles className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Thinking...</span>
+            </div>
+          )}
+        </div>
+
+        {/* Floating Input Zone */}
+        <div className="p-4 md:p-6 pb-24 md:pb-8">
+          <div className={cn(
+            "max-w-4xl mx-auto rounded-3xl bg-zinc-900/80 backdrop-blur-xl border transition-all duration-300 relative overflow-hidden",
+            inputFocused ? "border-indigo-500/50 shadow-2xl shadow-indigo-500/10 ring-1 ring-indigo-500/20" : "border-zinc-800 shadow-xl"
+          )}>
+
+            {/* Image Preview */}
+            <AnimatePresence>
+              {imagePreview && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-4 pt-4">
+                  <div className="relative inline-block">
+                    <img src={imagePreview} alt="Preview" className="h-20 rounded-xl border border-zinc-700" />
+                    <button onClick={() => { setImagePreview(null); setSelectedImage(null); }} className="absolute -top-2 -right-2 bg-zinc-800 rounded-full p-1 text-zinc-400 hover:text-white border border-zinc-700">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <form onSubmit={handleSend} className="flex items-end gap-2 p-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 text-zinc-400 hover:text-indigo-400 hover:bg-zinc-800/50 rounded-xl transition-colors"
+                title="Upload Image"
               >
-                {msg.sender === 'user' ? (
-                  /* User Message - Right aligned */
-                  <div className="flex justify-end">
-                    <div 
-                      className="max-w-[80%] md:max-w-[70%] p-4 md:p-5 rounded-3xl"
-                      style={{
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-primary)'
-                      }}
+                <Paperclip className="w-5 h-5" />
+              </button>
+
+              <div className="flex-1">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
+                  placeholder="Need a fit check? Type or drop image..."
+                  className="w-full bg-transparent border-none focus:ring-0 text-zinc-100 placeholder-zinc-500 resize-none py-3 max-h-32 min-h-[48px]"
+                  style={{ fieldSizing: "content" }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className={cn("p-3 rounded-xl transition-colors", showAdvanced ? "text-indigo-400 bg-indigo-400/10" : "text-zinc-400 hover:text-zinc-300")}
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+
+              <button
+                type="submit"
+                disabled={isLoading || (!input.trim() && !imagePreview)}
+                className="p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </form>
+
+            {/* Advanced Panel */}
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="border-t border-zinc-800/50 overflow-hidden"
+                >
+                  <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3 bg-zinc-900/30">
+                    <select
+                      value={formData.vibe}
+                      onChange={(e) => setFormData({ ...formData, vibe: e.target.value })}
+                      className="bg-zinc-800 border-none rounded-lg text-sm text-zinc-300 focus:ring-1 focus:ring-indigo-500"
                     >
-                      {msg.image && (
-                        <img 
-                          src={msg.image} 
-                          alt="uploaded" 
-                          className="mb-3 rounded-xl max-w-[200px] border"
-                          style={{ borderColor: 'var(--border-primary)' }}
-                        />
-                      )}
-                      <p className="text-base md:text-lg">{msg.text}</p>
-                    </div>
+                      <option value="">Select Vibe</option>
+                      <option value="streetwear">Streetwear</option>
+                      <option value="casual">Casual</option>
+                      <option value="formal">Formal</option>
+                      <option value="avant-garde">Avant-Garde</option>
+                    </select>
+
+                    <select
+                      value={formData.gender}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      className="bg-zinc-800 border-none rounded-lg text-sm text-zinc-300 focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Unisex">Unisex</option>
+                    </select>
+
+                    <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer col-span-2 md:col-span-1">
+                      <input
+                        type="checkbox"
+                        checked={formData.use_wardrobe_only}
+                        onChange={(e) => setFormData({ ...formData, use_wardrobe_only: e.target.checked })}
+                        className="rounded bg-zinc-700 border-zinc-600 text-indigo-500 focus:ring-indigo-500/50"
+                      />
+                      Use Wardrobe Only
+                    </label>
                   </div>
-                ) : (
-                  /* Bot Message - Left aligned, full width */
-                  <div className="flex justify-start">
-                    <div className="w-full">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg" 
-                             style={{ background: 'var(--bg-elevated)' }}>
-                          ✨
-                        </div>
-                        <span className="font-semibold text-sm" style={{ color: 'var(--text-secondary)', paddingTop: '6px' }}>
-                          DripMate
-                        </span>
-                      </div>
-                      <div className="pl-11">
-                        <BotResponse content={msg.content} onSave={handleSaveFavorite} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            
-            {isLoading && (
-              <div className="fade-in">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg" 
-                       style={{ background: 'var(--bg-elevated)' }}>
-                    ✨
-                  </div>
-                  <span className="font-semibold text-sm" style={{ color: 'var(--text-secondary)', paddingTop: '6px' }}>
-                    DripMate
-                  </span>
-                </div>
-                <div className="pl-11">
-                  <div className="inline-block px-5 py-3 rounded-2xl loading-shimmer">
-                    <p className="text-base pulse" style={{ color: 'var(--text-secondary)' }}>Thinking...</p>
-                  </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleFile(e.target.files[0])} />
           </div>
         </div>
       </main>
 
-      {/* Fixed Input Footer - ChatGPT/Gemini Style */}
-      <footer 
-        className="fixed bottom-0 left-0 right-0 pb-20 md:pb-24"
-        style={{ 
-          background: 'linear-gradient(to top, var(--bg-primary) 0%, var(--bg-primary) 90%, transparent 100%)',
-        }}
-      >
-        <div className="max-w-3xl mx-auto px-4 md:px-6 py-4">
-          {isInputMinimized ? (
-            /* Minimized Input - Show button to expand */
-            <button
-              onClick={() => setIsInputMinimized(false)}
-              className="w-full py-4 px-6 rounded-3xl font-medium text-base transition-all hover:scale-[1.01]"
-              style={{ 
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-primary)',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.3)'
-              }}
-            >
-              ✨ Ask for a new outfit suggestion
-            </button>
-          ) : (
-            /* Expanded Input */
-            <form onSubmit={handleSend} className="space-y-3">
-            {/* Mode Toggle */}
-            <div className="flex gap-2 fade-in">
-              <button
-                type="button"
-                onClick={() => handleModeChange("yourself")}
-                className={`flex-1 py-2.5 px-4 rounded-2xl font-medium text-sm transition-all ${
-                  chatMode === "yourself" ? '' : ''
-                }`}
-                style={{
-                  background: chatMode === "yourself" 
-                    ? 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)'
-                    : 'var(--bg-tertiary)',
-                  color: chatMode === "yourself" ? '#000000' : 'var(--text-secondary)',
-                  border: `1px solid ${chatMode === "yourself" ? '#ffffff' : 'transparent'}`
-                }}
-              >
-                👤 For Yourself
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange("others")}
-                className={`flex-1 py-2.5 px-4 rounded-2xl font-medium text-sm transition-all ${
-                  chatMode === "others" ? '' : ''
-                }`}
-                style={{
-                  background: chatMode === "others" 
-                    ? 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)'
-                    : 'var(--bg-tertiary)',
-                  color: chatMode === "others" ? '#000000' : 'var(--text-secondary)',
-                  border: `1px solid ${chatMode === "others" ? '#ffffff' : 'transparent'}`
-                }}
-              >
-                👥 For Others
-              </button>
-            </div>
-            
-            {chatMode === "yourself" && userProfile && (
-              <div className="px-4 py-2.5 rounded-2xl text-xs fade-in" 
-                   style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                ℹ️ Using your profile: {userProfile.gender}, {userProfile.age_group}, {userProfile.skin_colour}
-              </div>
-            )}
-            
-            {/* Image Preview */}
-            {imagePreview && (
-              <div className="flex items-center gap-3 fade-in">
-                <img 
-                  src={imagePreview} 
-                  alt="preview" 
-                  className="h-20 rounded-2xl border"
-                  style={{ borderColor: 'var(--border-primary)' }}
-                />
-                <button 
-                  type="button"
-                  onClick={handleClearImage}
-                  className="px-4 py-2 text-sm rounded-2xl transition-all hover:scale-105"
-                  style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-                >
-                  ✕ Remove
-                </button>
-              </div>
-            )}
+      {/* --- Right Sidebar (Details) --- */}
+      <aside className="hidden xl:flex w-80 flex-col border-l border-zinc-900 bg-zinc-950/50 backdrop-blur-xl p-6">
+        <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+          <Maximize2 className="w-5 h-5 text-indigo-500" />
+          Details
+        </h3>
 
-            {/* Main Input Container */}
-            <div 
-              className="rounded-3xl overflow-hidden"
-              style={{ 
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-primary)',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.4)'
-              }}
-            >
-              {/* Simple Text Input */}
-              <div className="flex items-end gap-3 p-4">
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('imageInput').click()}
-                  className="p-2.5 rounded-xl transition-all hover:scale-110"
-                  style={{ background: 'var(--bg-tertiary)' }}
-                  title="Upload image"
-                >
-                  <span className="text-xl">📎</span>
-                </button>
-                <input 
-                  type="file" 
-                  id="imageInput"
-                  accept="image/*" 
-                  capture="environment"
-                  onChange={handleImageSelect} 
-                  className="hidden" 
-                />
-                
-                <textarea
-                  value={simpleInput}
-                  onChange={(e) => setSimpleInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend(e);
-                    }
-                  }}
-                  placeholder={selectedImage ? "Add details (optional)..." : "Ask for outfit suggestions..."}
-                  rows={1}
-                  className="flex-1 bg-transparent border-0 resize-none outline-none text-base md:text-lg py-2"
-                  style={{ 
-                    maxHeight: '150px',
-                    color: 'var(--text-primary)'
-                  }}
-                />
-                
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="p-2.5 rounded-xl transition-all hover:scale-110"
-                  style={{ 
-                    background: showAdvanced ? 'var(--bg-card)' : 'transparent',
-                    color: 'var(--text-secondary)'
-                  }}
-                  title="Advanced options"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                  </svg>
-                </button>
-                
-                <button
-                  type="submit"
-                  disabled={isLoading || (!simpleInput.trim() && !selectedImage && (!showAdvanced || (!selectedImage && !formData.item) || !formData.vibe))}
-                  className="p-2.5 rounded-xl transition-all font-bold text-black disabled:opacity-40 hover:scale-110"
-                  style={{ background: 'linear-gradient(135deg, #ffffff 0%, #d0d0d0 100%)' }}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Advanced Options - Collapsible */}
-              {showAdvanced && (
-                <div 
-                  className="px-4 pb-4 pt-3 border-t slide-up space-y-3"
-                  style={{ borderColor: 'var(--border-secondary)' }}
-                >
-                  {/* Item and Vibe inputs for advanced mode */}
-                  <div className="grid grid-cols-1 gap-2">
-                    <input 
-                      type="text"
-                      name="item" 
-                      value={formData.item} 
-                      onChange={handleInputChange}
-                      placeholder={selectedImage ? "Clothing item (optional - detected from image)" : "* Clothing item (e.g., black hoodie)"}
-                      className="text-sm p-2"
-                      required={!selectedImage}
-                    />
-                    <input 
-                      type="text"
-                      name="vibe" 
-                      value={formData.vibe} 
-                      onChange={handleInputChange}
-                      placeholder="* Vibe/Theme (e.g., streetwear, casual, formal)"
-                      className="text-sm p-2"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                    {chatMode === "others" && (
-                      <select 
-                        name="gender" 
-                        value={formData.gender} 
-                        onChange={handleInputChange}
-                        className="text-sm p-2"
-                      >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Unisex">Unisex</option>
-                      </select>
-                    )}
-                    
-                    <select 
-                      name="layering_preference" 
-                      value={formData.layering_preference} 
-                      onChange={handleInputChange}
-                      className="text-sm p-2"
-                    >
-                      <option value="AI Decides">AI Decides Layers</option>
-                      <option value="Suggest Layers">With Layers</option>
-                      <option value="No Layers">No Layers</option>
-                    </select>
-                    
-                    <select 
-                      name="num_ideas" 
-                      value={formData.num_ideas} 
-                      onChange={handleInputChange}
-                      className="text-sm p-2"
-                    >
-                      <option value="1">1 Idea</option>
-                      <option value="2">2 Ideas</option>
-                      <option value="3">3 Ideas</option>
-                    </select>
-                    
-                    {chatMode === "others" && (
-                      <>
-                        <select 
-                          name="age_group" 
-                          value={formData.age_group} 
-                          onChange={handleInputChange}
-                          className="text-sm p-2"
-                        >
-                          <option value="">Age (optional)</option>
-                          <option value="Teen (under 18)">Teen</option>
-                          <option value="Young Adult (18-25)">Young Adult</option>
-                          <option value="Adult (26-40)">Adult</option>
-                          <option value="Mature (40+)">Mature</option>
-                        </select>
-                        
-                        <select 
-                          name="skin_colour" 
-                          value={formData.skin_colour} 
-                          onChange={handleInputChange}
-                          className="text-sm p-2 md:col-span-2"
-                        >
-                          <option value="">Skin tone (optional)</option>
-                          <option value="Fair/Light">Fair/Light</option>
-                          <option value="Tan/Medium">Tan/Medium</option>
-                          <option value="Dark/Deep">Dark/Deep</option>
-                        </select>
-                      </>
-                    )}
-                  </div>
-                  
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <input 
-                      type="checkbox" 
-                      name="use_wardrobe_only" 
-                      checked={formData.use_wardrobe_only} 
-                      onChange={handleInputChange}
-                      className="w-4 h-4 cursor-pointer"
-                      style={{ accentColor: '#ffffff' }}
-                    />
-                    <span>Use only my wardrobe items</span>
-                  </label>
-                </div>
+        <div className="flex-1 space-y-6">
+          <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800">
+            <h4 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Current Vibe</h4>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-medium border border-indigo-500/20">
+                {formData.vibe || "Undecided"}
+              </span>
+              {formData.gender && (
+                <span className="px-3 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs border border-zinc-700">
+                  {formData.gender}
+                </span>
               )}
             </div>
-            
-            <p className="text-xs text-center mt-2" style={{ color: 'var(--text-tertiary)' }}>
-              Press Enter to send • Shift+Enter for new line
+          </div>
+
+          <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800">
+            <h4 className="text-sm font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Style Tips</h4>
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              Upload a photo to get specific advice on color matching and proportions. DripMate works best with full-body shots.
             </p>
-          </form>
-          )}
+          </div>
         </div>
-      </footer>
+      </aside>
+
+      {/* --- Mobile Tab Bar --- */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-lg border-t border-zinc-900 z-40 bg-opacity-95 pb-[env(safe-area-inset-bottom)] md:pb-0">
+        <div className="flex justify-around p-2">
+          {menuItems.map(item => (
+            <NavItem
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              path={item.path}
+              isActive={activeTab === item.path}
+              onClick={handleNav}
+              isMobile
+            />
+          ))}
+        </div>
+      </nav>
+
     </div>
   );
 }
-
-export default ChatPage;
